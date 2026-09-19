@@ -1,4 +1,5 @@
 import { RefreshButton } from "@/components/RefreshButton";
+import { NotificationBell } from "@/components/NotificationBell";
 import { RiTrophyLine, RiInformationLine } from "@remixicon/react";
 
 interface DashboardHeaderProps {
@@ -43,7 +44,8 @@ export function DashboardHeader({ onRefresh, currentRevenue = 0 }: DashboardHead
           Visão geral do desempenho
         </p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <NotificationBell />
         <RefreshButton onRefresh={onRefresh} />
         
         {/* Prêmios com barra de progresso */}

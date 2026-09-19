@@ -48,22 +48,17 @@ export function NotificationBell({ className }: NotificationBellProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "relative flex h-9 w-9 items-center justify-center rounded-lg border transition-all cursor-pointer",
-            isSubscribed
-              ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
-              : "border-border/60 bg-card/80 text-muted-foreground hover:bg-muted hover:text-foreground",
-            className
-          )}
+        <Button
+          variant="outline"
+          size="icon"
+          className={cn("size-9 shrink-0 relative cursor-pointer", className)}
           title={isSubscribed ? "Notificações ativadas" : "Ativar notificações"}
           aria-label="Notificações"
         >
           {isSubscribed ? (
-            <RiBellFill className="size-4.5 text-primary" />
+            <RiBellFill className="size-4 text-primary" />
           ) : (
-            <RiBellLine className="size-4.5" />
+            <RiBellLine className="size-4 text-muted-foreground" />
           )}
 
           {/* Indicador de status */}
@@ -75,7 +70,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                 : "bg-amber-500 animate-pulse"
             )}
           />
-        </button>
+        </Button>
       </PopoverTrigger>
 
       <PopoverContent align="end" className="w-80 p-4 shadow-xl">

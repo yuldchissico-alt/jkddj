@@ -12,7 +12,6 @@ import {
   RiGeminiLine,
 } from "@remixicon/react";
 import { cn } from "@/lib/utils";
-import { NotificationBell } from "@/components/NotificationBell";
 
 interface AdminNavItem {
   label: string;
@@ -132,9 +131,6 @@ export function AdminLayout() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <header className="sticky top-0 z-30 flex h-12 items-center justify-end px-6 border-b border-border/40 bg-background/80 backdrop-blur-md">
-          <NotificationBell />
-        </header>
         <Outlet />
       </main>
     </div>
