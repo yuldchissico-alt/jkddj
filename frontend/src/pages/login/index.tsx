@@ -23,14 +23,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center p-4 bg-cover bg-center bg-no-repeat relative"
-      style={{ backgroundImage: "url('/bg_login.webp')" }}
-    >
-      {/* Dark overlay for readability */}
-      <div className="absolute inset-0 bg-black/10" />
-
-      <div className="relative z-10 w-full max-w-md space-y-8">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
           <img
@@ -38,7 +32,7 @@ export default function LoginPage() {
             alt="LomusTrack"
             className="h-14 w-auto object-contain drop-shadow-lg"
           />
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-slate-400">
             Faça login para acessar o dashboard
           </p>
         </div>
@@ -46,7 +40,7 @@ export default function LoginPage() {
         <LoginForm onSubmit={handleSubmit} error={error} loading={loading} />
 
         <div className="text-center">
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-slate-400">
             Não tem uma conta?{" "}
             <a
               href="/setup"
@@ -55,10 +49,6 @@ export default function LoginPage() {
               Criar conta
             </a>
           </p>
-        </div>
-
-        <div className="flex justify-center">
-          {/* Footer content can be added here if needed */}
         </div>
       </div>
     </div>

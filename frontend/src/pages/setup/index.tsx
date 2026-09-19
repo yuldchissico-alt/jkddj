@@ -117,18 +117,16 @@ export default function SetupPage() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center p-4 bg-cover bg-center bg-no-repeat relative"
-      style={{ backgroundImage: "url('/bg_login.webp')" }}
+      className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
     >
-      <div className="absolute inset-0 bg-black/10" />
-      <div className="relative z-10 w-full max-w-md space-y-8">
+      <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center gap-3">
           <img
             src="/logo_lomustrack.png"
             alt="LomusTrack"
             className="h-14 w-auto object-contain drop-shadow-lg"
           />
-          <p className="text-sm text-white/70 text-center">
+          <p className="text-sm text-slate-400 text-center">
             {inviteToken
               ? "Configure sua conta para acessar o LomusTrack"
               : "Configure sua conta de administrador para começar"}
@@ -139,7 +137,7 @@ export default function SetupPage() {
         {/* Link para login */}
         {!inviteToken && (
           <div className="text-center">
-            <p className="text-sm text-white/70">
+            <p className="text-sm text-slate-400">
               Já tem uma conta?{" "}
               <a
                 href="/login"
