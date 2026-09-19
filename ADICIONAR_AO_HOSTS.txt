@@ -1,0 +1,30 @@
+# ============================================
+# ADICIONE ESTA LINHA AO ARQUIVO HOSTS
+# ============================================
+
+# Supabase Database
+54.88.74.93 db.adrpyuedsyeohdhlnecj.supabase.co
+
+# ============================================
+# COMO ADICIONAR:
+# ============================================
+
+# 1. Abra o Bloco de Notas como ADMINISTRADOR
+#    (Botão direito no Bloco de Notas > Executar como administrador)
+
+# 2. Abra o arquivo:
+#    C:\Windows\System32\drivers\etc\hosts
+
+# 3. Adicione a linha acima no final do arquivo
+#    (depois da linha "# End of section")
+
+# 4. Salve o arquivo (Ctrl+S)
+
+# 5. Feche o Bloco de Notas
+
+# 6. Execute este comando no PowerShell para limpar o cache DNS:
+#    ipconfig /flushdns
+
+# 7. Tente conectar novamente executando:
+#    cd backend
+#    powershell -ExecutionPolicy Bypass -File start_backend.ps1

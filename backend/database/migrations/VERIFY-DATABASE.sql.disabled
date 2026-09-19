@@ -1,0 +1,327 @@
+-- ============================================================
+-- NEXUSCALE - Verificação Completa do Banco de Dados
+-- Database: PostgreSQL
+-- Descrição: Verifica se todas as tabelas, colunas e enums existem
+-- ============================================================
+
+DO $$
+DECLARE
+    v_table_count INTEGER;
+    v_missing_tables TEXT := '';
+    v_missing_columns TEXT := '';
+    v_total_admins INTEGER;
+    v_total_companies INTEGER;
+    v_total_transactions INTEGER;
+    v_total_customers INTEGER;
+    v_total_products INTEGER;
+    v_superadmin_exists BOOLEAN;
+BEGIN
+    RAISE NOTICE '';
+    RAISE NOTICE '============================================================';
+    RAISE NOTICE '🔍 VERIFICAÇÃO DO BANCO DE DADOS NEXUSCALE';
+    RAISE NOTICE '============================================================';
+    RAISE NOTICE '';
+
+    -- ========================================
+    -- 1. VERIFICAR ENUMS
+    -- ========================================
+    RAISE NOTICE '📋 1. VERIFICANDO ENUMS...';
+    
+    -- userrole
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole') THEN
+        RAISE NOTICE '   ✅ Enum: userrole';
+        IF EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'superadmin' AND enumtypid = 'userrole'::regtype) THEN
+            RAISE NOTICE '      ✅ Valor: superadmin';
+        ELSE
+            RAISE NOTICE '      ❌ Valor: superadmin (FALTANDO!)';
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'owner' AND enumtypid = 'userrole'::regtype) THEN
+            RAISE NOTICE '      ✅ Valor: owner';
+        END IF;
+    ELSE
+        RAISE NOTICE '   ❌ Enum: userrole (FALTANDO!)';
+    END IF;
+
+    -- transaction_status
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'transaction_status') THEN
+        RAISE NOTICE '   ✅ Enum: transaction_status';
+    ELSE
+        RAISE NOTICE '   ⚠️  Enum: transaction_status (opcional)';
+    END IF;
+
+    RAISE NOTICE '';
+
+    -- ========================================
+    -- 2. VERIFICAR TABELAS
+    -- ========================================
+    RAISE NOTICE '📊 2. VERIFICANDO TABELAS...';
+    
+    -- Contar tabelas
+    SELECT COUNT(*) INTO v_table_count
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+    
+    RAISE NOTICE '   Total de tabelas: %', v_table_count;
+    RAISE NOTICE '';
+
+    -- Verificar tabelas essenciais
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admins') THEN
+        RAISE NOTICE '   ✅ Tabela: admins';
+    ELSE
+        RAISE NOTICE '   ❌ Tabela: admins (FALTANDO!)';
+        v_missing_tables := v_missing_tables || 'admins, ';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'transactions') THEN
+        RAISE NOTICE '   ✅ Tabela: transactions';
+    ELSE
+        RAISE NOTICE '   ❌ Tabela: transactions (FALTANDO!)';
+        v_missing_tables := v_missing_tables || 'transactions, ';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customers') THEN
+        RAISE NOTICE '   ✅ Tabela: customers';
+    ELSE
+        RAISE NOTICE '   ❌ Tabela: customers (FALTANDO!)';
+        v_missing_tables := v_missing_tables || 'customers, ';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'products') THEN
+        RAISE NOTICE '   ✅ Tabela: products';
+    ELSE
+        RAISE NOTICE '   ❌ Tabela: products (FALTANDO!)';
+        v_missing_tables := v_missing_tables || 'products, ';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'facebook_accounts') THEN
+        RAISE NOTICE '   ✅ Tabela: facebook_accounts';
+    ELSE
+        RAISE NOTICE '   ⚠️  Tabela: facebook_accounts (opcional)';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'webhook_endpoints') THEN
+        RAISE NOTICE '   ✅ Tabela: webhook_endpoints';
+    ELSE
+        RAISE NOTICE '   ⚠️  Tabela: webhook_endpoints (opcional)';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'push_subscriptions') THEN
+        RAISE NOTICE '   ✅ Tabela: push_subscriptions';
+    ELSE
+        RAISE NOTICE '   ⚠️  Tabela: push_subscriptions (opcional)';
+    END IF;
+
+    RAISE NOTICE '';
+
+    -- ========================================
+    -- 3. VERIFICAR COLUNAS MULTI-TENANT
+    -- ========================================
+    RAISE NOTICE '🏢 3. VERIFICANDO COLUNAS MULTI-TENANT (company_id)...';
+
+    -- admins.company_id
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'admins' AND column_name = 'company_id') THEN
+        RAISE NOTICE '   ✅ admins.company_id';
+    ELSE
+        RAISE NOTICE '   ❌ admins.company_id (FALTANDO!)';
+        v_missing_columns := v_missing_columns || 'admins.company_id, ';
+    END IF;
+
+    -- admins.is_active
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'admins' AND column_name = 'is_active') THEN
+        RAISE NOTICE '   ✅ admins.is_active';
+    ELSE
+        RAISE NOTICE '   ❌ admins.is_active (FALTANDO!)';
+        v_missing_columns := v_missing_columns || 'admins.is_active, ';
+    END IF;
+
+    -- admins.subscription_expires_at
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'admins' AND column_name = 'subscription_expires_at') THEN
+        RAISE NOTICE '   ✅ admins.subscription_expires_at';
+    ELSE
+        RAISE NOTICE '   ❌ admins.subscription_expires_at (FALTANDO!)';
+        v_missing_columns := v_missing_columns || 'admins.subscription_expires_at, ';
+    END IF;
+
+    -- transactions.company_id
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'transactions' AND column_name = 'company_id') THEN
+        RAISE NOTICE '   ✅ transactions.company_id';
+    ELSE
+        RAISE NOTICE '   ❌ transactions.company_id (FALTANDO!)';
+        v_missing_columns := v_missing_columns || 'transactions.company_id, ';
+    END IF;
+
+    -- customers.company_id
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'customers' AND column_name = 'company_id') THEN
+        RAISE NOTICE '   ✅ customers.company_id';
+    ELSE
+        RAISE NOTICE '   ❌ customers.company_id (FALTANDO!)';
+        v_missing_columns := v_missing_columns || 'customers.company_id, ';
+    END IF;
+
+    -- products.company_id
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'company_id') THEN
+        RAISE NOTICE '   ✅ products.company_id';
+    ELSE
+        RAISE NOTICE '   ❌ products.company_id (FALTANDO!)';
+        v_missing_columns := v_missing_columns || 'products.company_id, ';
+    END IF;
+
+    RAISE NOTICE '';
+
+    -- ========================================
+    -- 4. VERIFICAR ÍNDICES
+    -- ========================================
+    RAISE NOTICE '🔍 4. VERIFICANDO ÍNDICES...';
+
+    IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_admins_company_id') THEN
+        RAISE NOTICE '   ✅ idx_admins_company_id';
+    ELSE
+        RAISE NOTICE '   ⚠️  idx_admins_company_id (recomendado)';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_admins_company_active') THEN
+        RAISE NOTICE '   ✅ idx_admins_company_active';
+    ELSE
+        RAISE NOTICE '   ⚠️  idx_admins_company_active (recomendado)';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_transactions_company_id') THEN
+        RAISE NOTICE '   ✅ idx_transactions_company_id';
+    ELSE
+        RAISE NOTICE '   ⚠️  idx_transactions_company_id (recomendado)';
+    END IF;
+
+    RAISE NOTICE '';
+
+    -- ========================================
+    -- 5. VERIFICAR SUPER ADMIN
+    -- ========================================
+    RAISE NOTICE '👤 5. VERIFICANDO SUPER ADMIN...';
+
+    SELECT EXISTS(SELECT 1 FROM admins WHERE role = 'superadmin') INTO v_superadmin_exists;
+    
+    IF v_superadmin_exists THEN
+        RAISE NOTICE '   ✅ Super Admin existe';
+        SELECT COUNT(*) INTO v_total_admins FROM admins WHERE role = 'superadmin';
+        RAISE NOTICE '   Total de super admins: %', v_total_admins;
+    ELSE
+        RAISE NOTICE '   ❌ Super Admin NÃO EXISTE!';
+        RAISE NOTICE '   Execute: INSERT INTO admins (name, email, password_hash, role, company_id, is_active)';
+        RAISE NOTICE '            VALUES (''Super Admin'', ''admin@nexuscale.com'', ''$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5eplkbrWq.YHO'', ''superadmin'', NULL, 1);';
+    END IF;
+
+    RAISE NOTICE '';
+
+    -- ========================================
+    -- 6. ESTATÍSTICAS GERAIS
+    -- ========================================
+    RAISE NOTICE '📊 6. ESTATÍSTICAS DO BANCO...';
+
+    -- Contar admins
+    SELECT COUNT(*) INTO v_total_admins FROM admins;
+    RAISE NOTICE '   Total de usuários: %', v_total_admins;
+
+    -- Contar empresas
+    SELECT COUNT(DISTINCT company_id) INTO v_total_companies FROM admins WHERE company_id IS NOT NULL;
+    RAISE NOTICE '   Total de empresas: %', v_total_companies;
+
+    -- Contar transações
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'transactions') THEN
+        SELECT COUNT(*) INTO v_total_transactions FROM transactions;
+        RAISE NOTICE '   Total de transações: %', v_total_transactions;
+    END IF;
+
+    -- Contar customers
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customers') THEN
+        SELECT COUNT(*) INTO v_total_customers FROM customers;
+        RAISE NOTICE '   Total de clientes: %', v_total_customers;
+    END IF;
+
+    -- Contar products
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'products') THEN
+        SELECT COUNT(*) INTO v_total_products FROM products;
+        RAISE NOTICE '   Total de produtos: %', v_total_products;
+    END IF;
+
+    RAISE NOTICE '';
+
+    -- ========================================
+    -- 7. RESULTADO FINAL
+    -- ========================================
+    RAISE NOTICE '============================================================';
+    IF v_missing_tables = '' AND v_missing_columns = '' AND v_superadmin_exists THEN
+        RAISE NOTICE '✅ BANCO DE DADOS COMPLETO E FUNCIONAL!';
+        RAISE NOTICE '';
+        RAISE NOTICE '🎉 Sistema SaaS Multi-Tenant pronto para uso!';
+        RAISE NOTICE '';
+        RAISE NOTICE '🔐 LOGIN SUPER ADMIN:';
+        RAISE NOTICE '   Email: admin@nexuscale.com';
+        RAISE NOTICE '   Senha: admin123';
+        RAISE NOTICE '   ⚠️  TROCAR SENHA IMEDIATAMENTE!';
+        RAISE NOTICE '';
+        RAISE NOTICE '🚀 ENDPOINTS DISPONÍVEIS:';
+        RAISE NOTICE '   GET    /api/superadmin/companies';
+        RAISE NOTICE '   GET    /api/superadmin/stats';
+        RAISE NOTICE '   PATCH  /api/superadmin/companies/:id/status';
+    ELSE
+        RAISE NOTICE '⚠️  BANCO DE DADOS INCOMPLETO!';
+        RAISE NOTICE '';
+        IF v_missing_tables != '' THEN
+            RAISE NOTICE '❌ Tabelas faltando: %', TRIM(TRAILING ', ' FROM v_missing_tables);
+        END IF;
+        IF v_missing_columns != '' THEN
+            RAISE NOTICE '❌ Colunas faltando: %', TRIM(TRAILING ', ' FROM v_missing_columns);
+        END IF;
+        IF NOT v_superadmin_exists THEN
+            RAISE NOTICE '❌ Super Admin não existe';
+        END IF;
+    END IF;
+    RAISE NOTICE '============================================================';
+    RAISE NOTICE '';
+END $$;
+
+-- ========================================
+-- CONSULTAS ADICIONAIS PARA VERIFICAÇÃO
+-- ========================================
+
+-- Listar todas as tabelas
+SELECT 
+    schemaname,
+    tablename,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY tablename;
+
+-- Listar estrutura da tabela admins
+SELECT 
+    column_name,
+    data_type,
+    is_nullable,
+    column_default
+FROM information_schema.columns
+WHERE table_name = 'admins'
+ORDER BY ordinal_position;
+
+-- Listar super admins
+SELECT 
+    id,
+    name,
+    email,
+    role,
+    company_id,
+    is_active,
+    created_at
+FROM admins
+WHERE role = 'superadmin';
+
+-- Listar todas as empresas
+SELECT 
+    company_id,
+    COUNT(*) as total_users,
+    MAX(CASE WHEN role = 'owner' THEN name END) as owner_name,
+    MAX(CASE WHEN role = 'owner' THEN email END) as owner_email
+FROM admins
+WHERE company_id IS NOT NULL
+GROUP BY company_id
+ORDER BY company_id;

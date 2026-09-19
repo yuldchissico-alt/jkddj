@@ -1,0 +1,124 @@
+-- ============================================================
+-- Migração Completa: Modelo SaaS com Super Admin
+-- Data: 2026-09-19
+-- Database: PostgreSQL
+-- Objetivo: Adicionar role superadmin e campos de assinatura
+-- ============================================================
+
+-- 1. Adicionar 'superadmin' ao enum (se não existir)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_enum 
+        WHERE enumlabel = 'superadmin' 
+        AND enumtypid = 'userrole'::regtype
+    ) THEN
+        ALTER TYPE userrole ADD VALUE 'superadmin' BEFORE 'owner';
+        RAISE NOTICE 'Valor superadmin adicionado ao enum userrole';
+    ELSE
+        RAISE NOTICE 'Valor superadmin já existe no enum userrole';
+    END IF;
+END $$;
+
+-- 2. Adicionar coluna is_active (se não existir)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'admins' 
+        AND column_name = 'is_active'
+    ) THEN
+        ALTER TABLE admins ADD COLUMN is_active INTEGER DEFAULT 1 NOT NULL;
+        COMMENT ON COLUMN admins.is_active IS '1=ativo, 0=suspenso';
+        RAISE NOTICE 'Coluna is_active criada';
+    ELSE
+        RAISE NOTICE 'Coluna is_active já existe';
+    END IF;
+END $$;
+
+-- 3. Adicionar coluna subscription_expires_at (se não existir)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'admins' 
+        AND column_name = 'subscription_expires_at'
+    ) THEN
+        ALTER TABLE admins ADD COLUMN subscription_expires_at TIMESTAMP NULL;
+        COMMENT ON COLUMN admins.subscription_expires_at IS 'Data de expiração da assinatura (NULL = ilimitado)';
+        RAISE NOTICE 'Coluna subscription_expires_at criada';
+    ELSE
+        RAISE NOTICE 'Coluna subscription_expires_at já existe';
+    END IF;
+END $$;
+
+-- 4. Criar índice (se não existir)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes 
+        WHERE indexname = 'idx_admins_company_active'
+    ) THEN
+        CREATE INDEX idx_admins_company_active ON admins(company_id, is_active);
+        RAISE NOTICE 'Índice idx_admins_company_active criado';
+    ELSE
+        RAISE NOTICE 'Índice idx_admins_company_active já existe';
+    END IF;
+END $$;
+
+-- 5. Criar super admin (se não existir)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM admins 
+        WHERE email = 'admin@nexuscale.com'
+    ) THEN
+        INSERT INTO admins (
+            name, 
+            email, 
+            password_hash, 
+            role, 
+            company_id, 
+            is_active, 
+            created_at
+        ) VALUES (
+            'Super Admin',
+            'admin@nexuscale.com',
+            '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5eplkbrWq.YHO',  -- senha: "admin123"
+            'superadmin',
+            NULL,
+            1,
+            NOW()
+        );
+        RAISE NOTICE 'Super Admin criado com sucesso!';
+        RAISE NOTICE 'Email: admin@nexuscale.com';
+        RAISE NOTICE 'Senha: admin123 (TROCAR IMEDIATAMENTE!)';
+    ELSE
+        RAISE NOTICE 'Super Admin já existe (email: admin@nexuscale.com)';
+    END IF;
+END $$;
+
+-- 6. Verificar resultado
+SELECT 
+    id, 
+    name, 
+    email, 
+    role, 
+    company_id, 
+    is_active,
+    created_at
+FROM admins 
+WHERE role = 'superadmin';
+
+-- ============================================================
+-- INFORMAÇÕES IMPORTANTES:
+-- ============================================================
+-- Login Super Admin:
+--   Email: admin@nexuscale.com
+--   Senha: admin123 (TROCAR IMEDIATAMENTE!)
+--
+-- Endpoints Super Admin:
+--   GET  /api/superadmin/companies       - Listar empresas
+--   GET  /api/superadmin/stats           - Estatísticas globais
+--   PATCH /api/superadmin/companies/1/status - Suspender/ativar
+-- ============================================================

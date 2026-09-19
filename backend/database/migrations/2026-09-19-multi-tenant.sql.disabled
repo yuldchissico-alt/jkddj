@@ -1,0 +1,115 @@
+-- Migration: Add multi-tenant support with company_id
+-- Date: 2026-09-19
+-- Description: Adds company_id to all tables to isolate data between different users/companies
+
+-- 1. Add company_id to admins table
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS company_id INTEGER;
+
+-- 2. Create index on company_id for admins
+CREATE INDEX IF NOT EXISTS idx_admins_company_id ON admins(company_id);
+
+-- 3. Add company_id to transactions
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS company_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_transactions_company_id ON transactions(company_id);
+
+-- 4. Add company_id to customers
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_customers_company_id ON customers(company_id);
+
+-- 5. Add company_id to products
+ALTER TABLE products ADD COLUMN IF NOT EXISTS company_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_products_company_id ON products(company_id);
+
+-- 6. Add company_id to facebook_accounts
+ALTER TABLE facebook_accounts ADD COLUMN IF NOT EXISTS company_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_facebook_accounts_company_id ON facebook_accounts(company_id);
+
+-- 7. Add company_id to webhook_endpoints
+ALTER TABLE webhook_endpoints ADD COLUMN IF NOT EXISTS company_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_company_id ON webhook_endpoints(company_id);
+
+-- 8. Add company_id to campaign_tags
+ALTER TABLE campaign_tags ADD COLUMN IF NOT EXISTS company_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_campaign_tags_company_id ON campaign_tags(company_id);
+
+-- 9. Add company_id to campaign_presets
+ALTER TABLE campaign_presets ADD COLUMN IF NOT EXISTS company_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_campaign_presets_company_id ON campaign_presets(company_id);
+
+-- 10. Add company_id to campaign_markers
+ALTER TABLE campaign_markers ADD COLUMN IF NOT EXISTS company_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_campaign_markers_company_id ON campaign_markers(company_id);
+
+-- 11. Add company_id to campaign_actions
+ALTER TABLE campaign_actions ADD COLUMN IF NOT EXISTS company_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_campaign_actions_company_id ON campaign_actions(company_id);
+
+-- 12. Add company_id to gemini_accounts (if exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'gemini_accounts') THEN
+        ALTER TABLE gemini_accounts ADD COLUMN IF NOT EXISTS company_id INTEGER;
+        CREATE INDEX IF NOT EXISTS idx_gemini_accounts_company_id ON gemini_accounts(company_id);
+    END IF;
+END $$;
+
+-- 13. Add company_id to stripe_accounts (if exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'stripe_accounts') THEN
+        ALTER TABLE stripe_accounts ADD COLUMN IF NOT EXISTS company_id INTEGER;
+        CREATE INDEX IF NOT EXISTS idx_stripe_accounts_company_id ON stripe_accounts(company_id);
+    END IF;
+END $$;
+
+-- 14. Add company_id to company_settings
+ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS company_id INTEGER UNIQUE;
+CREATE INDEX IF NOT EXISTS idx_company_settings_company_id ON company_settings(company_id);
+
+-- 15. Add company_id to push_subscriptions (if exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'push_subscriptions') THEN
+        ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS company_id INTEGER;
+        CREATE INDEX IF NOT EXISTS idx_push_subscriptions_company_id ON push_subscriptions(company_id);
+    END IF;
+END $$;
+
+-- For existing data, we'll assign everything to company_id = 1 (default company)
+-- This assumes there's only one company using the system currently
+
+UPDATE admins SET company_id = 1 WHERE company_id IS NULL;
+UPDATE transactions SET company_id = 1 WHERE company_id IS NULL;
+UPDATE customers SET company_id = 1 WHERE company_id IS NULL;
+UPDATE products SET company_id = 1 WHERE company_id IS NULL;
+UPDATE facebook_accounts SET company_id = 1 WHERE company_id IS NULL;
+UPDATE webhook_endpoints SET company_id = 1 WHERE company_id IS NULL;
+UPDATE campaign_tags SET company_id = 1 WHERE company_id IS NULL;
+UPDATE campaign_presets SET company_id = 1 WHERE company_id IS NULL;
+UPDATE campaign_markers SET company_id = 1 WHERE company_id IS NULL;
+UPDATE campaign_actions SET company_id = 1 WHERE company_id IS NULL;
+UPDATE company_settings SET company_id = 1 WHERE company_id IS NULL;
+
+-- Update optional tables if they exist
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'gemini_accounts') THEN
+        UPDATE gemini_accounts SET company_id = 1 WHERE company_id IS NULL;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'stripe_accounts') THEN
+        UPDATE stripe_accounts SET company_id = 1 WHERE company_id IS NULL;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'push_subscriptions') THEN
+        UPDATE push_subscriptions SET company_id = 1 WHERE company_id IS NULL;
+    END IF;
+END $$;
+
+-- Make company_id NOT NULL after assigning values (commented out for now to avoid breaking existing code)
+-- ALTER TABLE admins ALTER COLUMN company_id SET NOT NULL;
+-- ALTER TABLE transactions ALTER COLUMN company_id SET NOT NULL;
+-- ALTER TABLE customers ALTER COLUMN company_id SET NOT NULL;
+-- ALTER TABLE products ALTER COLUMN company_id SET NOT NULL;
+-- ALTER TABLE facebook_accounts ALTER COLUMN company_id SET NOT NULL;
+-- etc...

@@ -1,0 +1,372 @@
+-- ============================================================
+-- NEXUSCALE - Schema Completo do Banco de Dados
+-- Database: PostgreSQL
+-- Versão: 2026-09-19
+-- Descrição: Cria todas as tabelas, enums e índices
+-- ============================================================
+
+-- ============================================================
+-- 1. CRIAR ENUMS
+-- ============================================================
+
+-- Enum: User Roles
+DO $$ BEGIN
+    CREATE TYPE userrole AS ENUM ('superadmin', 'owner', 'admin', 'viewer');
+    RAISE NOTICE 'Enum userrole criado';
+EXCEPTION
+    WHEN duplicate_object THEN
+        RAISE NOTICE 'Enum userrole já existe';
+END $$;
+
+-- Enum: Transaction Status
+DO $$ BEGIN
+    CREATE TYPE transaction_status AS ENUM ('pending', 'approved', 'refunded', 'chargeback', 'cancelled');
+    RAISE NOTICE 'Enum transaction_status criado';
+EXCEPTION
+    WHEN duplicate_object THEN
+        RAISE NOTICE 'Enum transaction_status já existe';
+END $$;
+
+-- Enum: Payment Platform
+DO $$ BEGIN
+    CREATE TYPE payment_platform AS ENUM ('kiwify', 'payt', 'stripe', 'api');
+    RAISE NOTICE 'Enum payment_platform criado';
+EXCEPTION
+    WHEN duplicate_object THEN
+        RAISE NOTICE 'Enum payment_platform já existe';
+END $$;
+
+-- Enum: Webhook Platform
+DO $$ BEGIN
+    CREATE TYPE webhook_platform AS ENUM ('kiwify', 'payt', 'api');
+    RAISE NOTICE 'Enum webhook_platform criado';
+EXCEPTION
+    WHEN duplicate_object THEN
+        RAISE NOTICE 'Enum webhook_platform já existe';
+END $$;
+
+-- ============================================================
+-- 2. CRIAR TABELAS
+-- ============================================================
+
+-- Tabela: admins (usuários do sistema)
+CREATE TABLE IF NOT EXISTS admins (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NULL,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE NULL,
+    password_hash VARCHAR(255) NULL,
+    role userrole NOT NULL DEFAULT 'owner',
+    invite_token VARCHAR(255) UNIQUE NULL,
+    is_active INTEGER DEFAULT 1 NOT NULL,
+    subscription_expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE admins IS 'Usuários do sistema (owners, admins, viewers, superadmin)';
+COMMENT ON COLUMN admins.company_id IS 'ID da empresa (NULL para superadmin)';
+COMMENT ON COLUMN admins.is_active IS '1=ativo, 0=suspenso';
+COMMENT ON COLUMN admins.subscription_expires_at IS 'Data de expiração da assinatura';
+
+-- Tabela: transactions (vendas/transações)
+CREATE TABLE IF NOT EXISTS transactions (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NULL,
+    external_id VARCHAR(255) NULL,
+    customer_id INTEGER NULL,
+    product_id INTEGER NULL,
+    platform payment_platform NOT NULL DEFAULT 'api',
+    webhook_slug VARCHAR(50) NULL,
+    status transaction_status NOT NULL DEFAULT 'approved',
+    amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    product_name VARCHAR(255) NULL,
+    customer_name VARCHAR(255) NULL,
+    customer_email VARCHAR(255) NULL,
+    customer_phone VARCHAR(50) NULL,
+    customer_cpf VARCHAR(14) NULL,
+    utm_source VARCHAR(255) NULL,
+    utm_medium VARCHAR(255) NULL,
+    utm_campaign VARCHAR(255) NULL,
+    utm_content VARCHAR(255) NULL,
+    src VARCHAR(500) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE transactions IS 'Transações/vendas do sistema';
+
+-- Tabela: customers (clientes finais)
+CREATE TABLE IF NOT EXISTS customers (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NULL,
+    external_id VARCHAR(255) NULL,
+    name VARCHAR(255) NULL,
+    email VARCHAR(255) NULL,
+    phone VARCHAR(50) NULL,
+    cpf VARCHAR(14) NULL,
+    total_spent DECIMAL(10, 2) DEFAULT 0,
+    total_orders INTEGER DEFAULT 0,
+    first_purchase_at TIMESTAMP NULL,
+    last_purchase_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE customers IS 'Clientes finais (compradores)';
+
+-- Tabela: products (produtos)
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NULL,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE products IS 'Produtos cadastrados';
+
+-- Tabela: product_aliases (nomes alternativos dos produtos)
+CREATE TABLE IF NOT EXISTS product_aliases (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL,
+    alias VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(alias)
+);
+COMMENT ON TABLE product_aliases IS 'Aliases/nomes alternativos de produtos';
+
+-- Tabela: product_checkouts (checkouts dos produtos)
+CREATE TABLE IF NOT EXISTS product_checkouts (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price DECIMAL(10, 2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE product_checkouts IS 'Checkouts de produtos';
+
+-- Tabela: upsells (upsells dos produtos)
+CREATE TABLE IF NOT EXISTS upsells (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price DECIMAL(10, 2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE upsells IS 'Upsells dos produtos';
+
+-- Tabela: customer_products (relação cliente-produto)
+CREATE TABLE IF NOT EXISTS customer_products (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(customer_id, product_id)
+);
+COMMENT ON TABLE customer_products IS 'Relação muitos-para-muitos entre clientes e produtos';
+
+-- Tabela: facebook_accounts (contas do Facebook Ads)
+CREATE TABLE IF NOT EXISTS facebook_accounts (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NULL,
+    label VARCHAR(255) NOT NULL,
+    account_id VARCHAR(255) NOT NULL,
+    access_token TEXT NOT NULL,
+    business_id VARCHAR(255) NULL,
+    token_valid BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE facebook_accounts IS 'Contas do Facebook Ads conectadas';
+
+-- Tabela: webhook_endpoints (endpoints de webhook)
+CREATE TABLE IF NOT EXISTS webhook_endpoints (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NULL,
+    slug VARCHAR(50) UNIQUE NOT NULL,
+    platform webhook_platform NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE webhook_endpoints IS 'Endpoints de webhook para receber dados de plataformas';
+
+-- Tabela: push_subscriptions (subscrições de push notifications)
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NULL,
+    user_id INTEGER NULL,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    user_agent VARCHAR(500) NULL,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP NULL
+);
+COMMENT ON TABLE push_subscriptions IS 'Subscrições de push notifications';
+
+-- Tabela: campaign_presets (presets de campanhas)
+CREATE TABLE IF NOT EXISTS campaign_presets (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    filters JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE campaign_presets IS 'Presets de filtros de campanhas';
+
+-- Tabela: campaign_tags (tags de campanhas)
+CREATE TABLE IF NOT EXISTS campaign_tags (
+    id SERIAL PRIMARY KEY,
+    campaign_id VARCHAR(255) NOT NULL,
+    tag VARCHAR(100) NOT NULL,
+    color VARCHAR(50) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(campaign_id, tag)
+);
+COMMENT ON TABLE campaign_tags IS 'Tags de campanhas do Meta Ads';
+
+-- Tabela: campaign_markers (marcadores de campanhas)
+CREATE TABLE IF NOT EXISTS campaign_markers (
+    id SERIAL PRIMARY KEY,
+    campaign_id VARCHAR(255) NOT NULL UNIQUE,
+    marker VARCHAR(50) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE campaign_markers IS 'Marcadores de campanhas (estrela, etc)';
+
+-- Tabela: gemini_accounts (contas Gemini AI)
+CREATE TABLE IF NOT EXISTS gemini_accounts (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    api_key TEXT NOT NULL,
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE gemini_accounts IS 'Contas Gemini AI para chat/relatórios';
+
+-- Tabela: stripe_accounts (contas Stripe)
+CREATE TABLE IF NOT EXISTS stripe_accounts (
+    id SERIAL PRIMARY KEY,
+    label VARCHAR(255) NOT NULL,
+    secret_key TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE stripe_accounts IS 'Contas Stripe para pagamentos';
+
+-- ============================================================
+-- 3. CRIAR ÍNDICES
+-- ============================================================
+
+-- Índices: admins
+CREATE INDEX IF NOT EXISTS idx_admins_company_id ON admins(company_id);
+CREATE INDEX IF NOT EXISTS idx_admins_company_active ON admins(company_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_admins_email ON admins(email);
+
+-- Índices: transactions
+CREATE INDEX IF NOT EXISTS idx_transactions_company_id ON transactions(company_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_customer_id ON transactions(customer_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_product_id ON transactions(product_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
+CREATE INDEX IF NOT EXISTS idx_transactions_platform ON transactions(platform);
+CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);
+CREATE INDEX IF NOT EXISTS idx_transactions_webhook_slug ON transactions(webhook_slug);
+CREATE INDEX IF NOT EXISTS idx_transactions_utm_campaign ON transactions(utm_campaign);
+
+-- Índices: customers
+CREATE INDEX IF NOT EXISTS idx_customers_company_id ON customers(company_id);
+CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
+CREATE INDEX IF NOT EXISTS idx_customers_external_id ON customers(external_id);
+
+-- Índices: products
+CREATE INDEX IF NOT EXISTS idx_products_company_id ON products(company_id);
+
+-- Índices: facebook_accounts
+CREATE INDEX IF NOT EXISTS idx_facebook_accounts_company_id ON facebook_accounts(company_id);
+
+-- Índices: webhook_endpoints
+CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_company_id ON webhook_endpoints(company_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_slug ON webhook_endpoints(slug);
+
+-- Índices: push_subscriptions
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_company_id ON push_subscriptions(company_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_is_active ON push_subscriptions(is_active);
+
+-- Mensagem de sucesso
+DO $$ BEGIN
+    RAISE NOTICE '✅ Todos os índices criados';
+END $$;
+
+-- ============================================================
+-- 4. CRIAR SUPER ADMIN
+-- ============================================================
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM admins 
+        WHERE email = 'admin@nexuscale.com'
+    ) THEN
+        INSERT INTO admins (
+            name, 
+            email, 
+            password_hash, 
+            role, 
+            company_id, 
+            is_active, 
+            created_at
+        ) VALUES (
+            'Super Admin',
+            'admin@nexuscale.com',
+            '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5eplkbrWq.YHO',
+            'superadmin',
+            NULL,
+            1,
+            NOW()
+        );
+        RAISE NOTICE '✅ Super Admin criado!';
+        RAISE NOTICE '   Email: admin@nexuscale.com';
+        RAISE NOTICE '   Senha: admin123 (TROCAR!)';
+    ELSE
+        RAISE NOTICE '⚠️  Super Admin já existe';
+    END IF;
+END $$;
+
+-- ============================================================
+-- 5. VERIFICAÇÃO FINAL
+-- ============================================================
+
+DO $$
+DECLARE
+    table_count INTEGER;
+    admin_count INTEGER;
+BEGIN
+    -- Contar tabelas
+    SELECT COUNT(*) INTO table_count
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+    AND table_type = 'BASE TABLE';
+    
+    -- Contar admins
+    SELECT COUNT(*) INTO admin_count
+    FROM admins;
+    
+    RAISE NOTICE '';
+    RAISE NOTICE '============================================================';
+    RAISE NOTICE 'MIGRAÇÃO CONCLUÍDA COM SUCESSO!';
+    RAISE NOTICE '============================================================';
+    RAISE NOTICE 'Tabelas criadas: %', table_count;
+    RAISE NOTICE 'Usuários criados: %', admin_count;
+    RAISE NOTICE '';
+    RAISE NOTICE 'LOGIN SUPER ADMIN:';
+    RAISE NOTICE '  Email: admin@nexuscale.com';
+    RAISE NOTICE '  Senha: admin123';
+    RAISE NOTICE '  ⚠️  TROCAR SENHA IMEDIATAMENTE!';
+    RAISE NOTICE '';
+    RAISE NOTICE 'ENDPOINTS SUPER ADMIN:';
+    RAISE NOTICE '  GET  /api/superadmin/companies';
+    RAISE NOTICE '  GET  /api/superadmin/stats';
+    RAISE NOTICE '  PATCH /api/superadmin/companies/:id/status';
+    RAISE NOTICE '============================================================';
+END $$;
+
+-- Mostrar tabelas criadas
+SELECT 
+    schemaname AS schema,
+    tablename AS table_name,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY tablename;

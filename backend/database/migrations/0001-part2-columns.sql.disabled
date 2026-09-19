@@ -1,0 +1,249 @@
+-- ============================================================
+-- PARTE 2: Adicionar colunas e criar super admin
+-- EXECUTE APÓS 0001-part1-enum.sql
+-- ============================================================
+
+-- ============================================================
+-- 1. ATUALIZAR TABELA ADMINS
+-- ============================================================
+
+-- Adicionar coluna is_active
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'admins' 
+        AND column_name = 'is_active'
+    ) THEN
+        ALTER TABLE admins ADD COLUMN is_active INTEGER DEFAULT 1 NOT NULL;
+        COMMENT ON COLUMN admins.is_active IS '1=ativo, 0=suspenso';
+        RAISE NOTICE '✅ Coluna admins.is_active criada';
+    ELSE
+        RAISE NOTICE '⚠️  Coluna admins.is_active já existe';
+    END IF;
+END $$;
+
+-- Adicionar coluna subscription_expires_at
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'admins' 
+        AND column_name = 'subscription_expires_at'
+    ) THEN
+        ALTER TABLE admins ADD COLUMN subscription_expires_at TIMESTAMP NULL;
+        COMMENT ON COLUMN admins.subscription_expires_at IS 'Data de expiração da assinatura (NULL = ilimitado)';
+        RAISE NOTICE '✅ Coluna admins.subscription_expires_at criada';
+    ELSE
+        RAISE NOTICE '⚠️  Coluna admins.subscription_expires_at já existe';
+    END IF;
+END $$;
+
+-- ============================================================
+-- 2. ATUALIZAR TABELA TRANSACTIONS
+-- ============================================================
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'transactions' 
+        AND column_name = 'company_id'
+    ) THEN
+        ALTER TABLE transactions ADD COLUMN company_id INTEGER NULL;
+        UPDATE transactions SET company_id = 1 WHERE company_id IS NULL;
+        RAISE NOTICE '✅ Coluna transactions.company_id criada';
+    ELSE
+        RAISE NOTICE '⚠️  Coluna transactions.company_id já existe';
+    END IF;
+END $$;
+
+-- ============================================================
+-- 3. ATUALIZAR TABELA CUSTOMERS
+-- ============================================================
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'customers' 
+        AND column_name = 'company_id'
+    ) THEN
+        ALTER TABLE customers ADD COLUMN company_id INTEGER NULL;
+        UPDATE customers SET company_id = 1 WHERE company_id IS NULL;
+        RAISE NOTICE '✅ Coluna customers.company_id criada';
+    ELSE
+        RAISE NOTICE '⚠️  Coluna customers.company_id já existe';
+    END IF;
+END $$;
+
+-- ============================================================
+-- 4. ATUALIZAR TABELA PRODUCTS
+-- ============================================================
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'products' 
+        AND column_name = 'company_id'
+    ) THEN
+        ALTER TABLE products ADD COLUMN company_id INTEGER NULL;
+        UPDATE products SET company_id = 1 WHERE company_id IS NULL;
+        RAISE NOTICE '✅ Coluna products.company_id criada';
+    ELSE
+        RAISE NOTICE '⚠️  Coluna products.company_id já existe';
+    END IF;
+END $$;
+
+-- ============================================================
+-- 5. ATUALIZAR TABELA FACEBOOK_ACCOUNTS
+-- ============================================================
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'facebook_accounts' 
+        AND column_name = 'company_id'
+    ) THEN
+        ALTER TABLE facebook_accounts ADD COLUMN company_id INTEGER NULL;
+        UPDATE facebook_accounts SET company_id = 1 WHERE company_id IS NULL;
+        RAISE NOTICE '✅ Coluna facebook_accounts.company_id criada';
+    ELSE
+        RAISE NOTICE '⚠️  Coluna facebook_accounts.company_id já existe';
+    END IF;
+END $$;
+
+-- ============================================================
+-- 6. ATUALIZAR TABELA WEBHOOK_ENDPOINTS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS webhook_endpoints (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NULL,
+    slug VARCHAR(50) UNIQUE NOT NULL,
+    platform VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_name = 'webhook_endpoints'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'webhook_endpoints' 
+        AND column_name = 'company_id'
+    ) THEN
+        ALTER TABLE webhook_endpoints ADD COLUMN company_id INTEGER NULL;
+        UPDATE webhook_endpoints SET company_id = 1 WHERE company_id IS NULL;
+        RAISE NOTICE '✅ Coluna webhook_endpoints.company_id criada';
+    ELSE
+        RAISE NOTICE '✅ Tabela webhook_endpoints OK';
+    END IF;
+END $$;
+
+-- ============================================================
+-- 7. ATUALIZAR TABELA PUSH_SUBSCRIPTIONS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NULL,
+    user_id INTEGER NULL,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    user_agent VARCHAR(500) NULL,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP NULL
+);
+
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_name = 'push_subscriptions'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'push_subscriptions' 
+        AND column_name = 'company_id'
+    ) THEN
+        ALTER TABLE push_subscriptions ADD COLUMN company_id INTEGER NULL;
+        UPDATE push_subscriptions SET company_id = 1 WHERE company_id IS NULL;
+        RAISE NOTICE '✅ Coluna push_subscriptions.company_id criada';
+    ELSE
+        RAISE NOTICE '✅ Tabela push_subscriptions OK';
+    END IF;
+END $$;
+
+-- ============================================================
+-- 8. CRIAR ÍNDICES
+-- ============================================================
+
+CREATE INDEX IF NOT EXISTS idx_admins_company_id ON admins(company_id);
+CREATE INDEX IF NOT EXISTS idx_admins_company_active ON admins(company_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_transactions_company_id ON transactions(company_id);
+CREATE INDEX IF NOT EXISTS idx_customers_company_id ON customers(company_id);
+CREATE INDEX IF NOT EXISTS idx_products_company_id ON products(company_id);
+CREATE INDEX IF NOT EXISTS idx_facebook_accounts_company_id ON facebook_accounts(company_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_company_id ON webhook_endpoints(company_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_company_id ON push_subscriptions(company_id);
+
+DO $$ BEGIN
+    RAISE NOTICE '✅ Índices criados';
+END $$;
+
+-- ============================================================
+-- 9. CRIAR SUPER ADMIN
+-- ============================================================
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM admins 
+        WHERE email = 'admin@nexuscale.com'
+    ) THEN
+        INSERT INTO admins (
+            name, 
+            email, 
+            password_hash, 
+            role, 
+            company_id, 
+            is_active, 
+            created_at
+        ) VALUES (
+            'Super Admin',
+            'admin@nexuscale.com',
+            '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5eplkbrWq.YHO',
+            'superadmin',
+            NULL,
+            1,
+            NOW()
+        );
+        RAISE NOTICE '';
+        RAISE NOTICE '🎉 ============================================================';
+        RAISE NOTICE '✅ SUPER ADMIN CRIADO COM SUCESSO!';
+        RAISE NOTICE '============================================================';
+        RAISE NOTICE '📧 Email: admin@nexuscale.com';
+        RAISE NOTICE '🔑 Senha: admin123';
+        RAISE NOTICE '⚠️  TROCAR SENHA IMEDIATAMENTE!';
+        RAISE NOTICE '';
+        RAISE NOTICE '🚀 Endpoints disponíveis:';
+        RAISE NOTICE '   GET    /api/superadmin/companies';
+        RAISE NOTICE '   GET    /api/superadmin/stats';
+        RAISE NOTICE '   PATCH  /api/superadmin/companies/:id/status';
+        RAISE NOTICE '============================================================';
+    ELSE
+        RAISE NOTICE '⚠️  Super Admin já existe';
+    END IF;
+END $$;
+
+-- Verificar
+SELECT id, name, email, role, company_id, is_active 
+FROM admins 
+WHERE role = 'superadmin';

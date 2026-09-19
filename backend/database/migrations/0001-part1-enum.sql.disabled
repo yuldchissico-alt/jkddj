@@ -1,0 +1,20 @@
+-- ============================================================
+-- PARTE 1: Adicionar enum superadmin
+-- EXECUTE ESTE PRIMEIRO E SOZINHO!
+-- ============================================================
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_enum 
+        WHERE enumlabel = 'superadmin' 
+        AND enumtypid = 'userrole'::regtype
+    ) THEN
+        ALTER TYPE userrole ADD VALUE 'superadmin' BEFORE 'owner';
+        RAISE NOTICE '✅ Valor superadmin adicionado ao enum userrole';
+        RAISE NOTICE '⚠️  AGORA execute: 0001-part2-columns.sql';
+    ELSE
+        RAISE NOTICE '✅ Valor superadmin já existe no enum userrole';
+        RAISE NOTICE '⚠️  Pode pular para: 0001-part2-columns.sql';
+    END IF;
+END $$;

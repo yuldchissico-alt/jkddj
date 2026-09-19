@@ -1,0 +1,43 @@
+-- Migração: Modelo SaaS com Super Admin
+-- Data: 2026-09-19
+-- Objetivo: Adicionar role superadmin e campos de assinatura
+-- Database: PostgreSQL
+
+-- PARTE 1: Adicionar novo valor ao enum (precisa ser commitado antes de usar)
+DO $$ BEGIN
+    -- Adicionar 'superadmin' ao enum se não existir
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'superadmin' AND enumtypid = 'userrole'::regtype) THEN
+        ALTER TYPE userrole ADD VALUE 'superadmin' BEFORE 'owner';
+    END IF;
+END $$;
+
+-- PARTE 2: Adicionar campos de controle de conta
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS is_active INTEGER DEFAULT 1 NOT NULL;
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP NULL;
+
+-- PARTE 3: Adicionar comentários
+COMMENT ON COLUMN admins.is_active IS '1=ativo, 0=suspenso';
+COMMENT ON COLUMN admins.subscription_expires_at IS 'Data de expiração da assinatura (NULL = ilimitado)';
+
+-- PARTE 4: Criar índice para consultas rápidas de empresas ativas
+CREATE INDEX IF NOT EXISTS idx_admins_company_active ON admins(company_id, is_active);
+
+-- Comentários:
+-- - Usuários normais: company_id = número da empresa (1, 2, 3...)
+-- - Super admin: company_id = NULL (acesso ao painel admin)
+-- - is_active = 0 bloqueia login da empresa inteira
+-- - subscription_expires_at controla validade da assinatura (futuro)
+
+-- ATENÇÃO: Execute este INSERT em um comando SEPARADO após a migração acima:
+-- 
+-- INSERT INTO admins (name, email, password_hash, role, company_id, is_active, created_at) 
+-- VALUES (
+--     'Super Admin',
+--     'admin@nexuscale.com',
+--     '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5eplkbrWq.YHO',
+--     'superadmin',
+--     NULL,
+--     1,
+--     NOW()
+-- )
+-- ON CONFLICT (email) DO NOTHING;
