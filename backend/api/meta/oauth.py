@@ -48,8 +48,8 @@ def connect_meta(db: Session = Depends(get_db), current_user: Admin = Depends(ge
         raise HTTPException(status_code=500, detail="META_APP_ID não configurado no backend")
 
     state = create_access_token({
-        "sub": current_user.id,
-        "company_id": current_user.company_id,
+        "sub": str(current_user.id),
+        "company_id": str(current_user.company_id),
         "type": "meta_oauth",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
     })
@@ -96,6 +96,13 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
     company_id = payload.get("company_id")
     if not user_id:
         raise HTTPException(status_code=401, detail="Usuário não identificado no state do OAuth")
+
+    try:
+        user_id = int(user_id)
+        if company_id is not None:
+            company_id = int(company_id)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="State de OAuth inválido")
 
     if not META_APP_SECRET:
         raise HTTPException(status_code=500, detail="META_APP_SECRET não configurado no backend")
