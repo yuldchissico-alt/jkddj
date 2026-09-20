@@ -34,10 +34,12 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
       }
     };
 
-    loadStatus();
     const params = new URLSearchParams(window.location.search);
-    if (params.get("meta_status") === "connected") {
-      setMetaStatus("connected");
+    const metaStatusParam = params.get("meta_status");
+
+    loadStatus();
+
+    if (metaStatusParam) {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
