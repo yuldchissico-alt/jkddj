@@ -65,6 +65,26 @@ export default function FacebookAdsPage() {
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const metaStatusParam = params.get("meta_status");
+    const metaAccountParam = params.get("meta_account");
+
+    if (metaStatusParam === "connected") {
+      setMetaConnected(true);
+      setMetaProfileName(metaAccountParam ? decodeURIComponent(metaAccountParam) : "Meta Ads");
+      void loadMetaAccounts();
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
+
+    if (metaStatusParam === "error") {
+      const detail = params.get("detail");
+      toast.error(detail ? decodeURIComponent(detail) : "Erro ao conectar com a Meta");
+      setMetaConnected(false);
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
+
     const checkMetaStatus = async () => {
       try {
         const token = getCookie("access_token") || "";
