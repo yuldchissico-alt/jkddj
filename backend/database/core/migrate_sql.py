@@ -27,6 +27,59 @@ def _file_hash(filepath: str) -> str:
         return hashlib.sha256(f.read().encode()).hexdigest()
 
 
+def _split_sql_statements(sql_content: str) -> list[str]:
+    """Split SQL into executable statements while preserving PostgreSQL dollar-quoted blocks."""
+    statements: list[str] = []
+    buffer: list[str] = []
+    i = 0
+    delimiter: str | None = None
+
+    while i < len(sql_content):
+        if delimiter is None:
+            if sql_content.startswith("$$", i):
+                delimiter = "$$"
+                buffer.append("$$")
+                i += 2
+                continue
+
+            if sql_content[i] == "$":
+                j = i + 1
+                while j < len(sql_content) and (sql_content[j].isalnum() or sql_content[j] == "_"):
+                    j += 1
+                if j < len(sql_content) and sql_content[j] == "$":
+                    delimiter = sql_content[i:j + 1]
+                    buffer.append(delimiter)
+                    i = j + 1
+                    continue
+
+            if sql_content[i] == ";":
+                stmt = "".join(buffer).strip()
+                if stmt:
+                    statements.append(stmt)
+                buffer = []
+                i += 1
+                continue
+
+            buffer.append(sql_content[i])
+            i += 1
+            continue
+
+        if sql_content.startswith(delimiter, i):
+            buffer.append(delimiter)
+            i += len(delimiter)
+            delimiter = None
+            continue
+
+        buffer.append(sql_content[i])
+        i += 1
+
+    trailing = "".join(buffer).strip()
+    if trailing:
+        statements.append(trailing)
+
+    return statements
+
+
 def run_sql_migrations():
     """Execute all .sql files from database/migrations/ in alphabetical order.
 
@@ -65,7 +118,7 @@ def run_sql_migrations():
                 sql_content = f.read().strip()
 
             if sql_content:
-                for statement in sql_content.split(";"):
+                for statement in _split_sql_statements(sql_content):
                     stmt = statement.strip()
                     if stmt:
                         conn.execute(text(stmt))

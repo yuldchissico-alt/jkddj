@@ -56,6 +56,8 @@ from api.users.invite import router as users_invite_router
 from api.users.manage import router as users_manage_router
 from api.stripe.accounts import router as stripe_accounts_router
 from api.subscriptions.metrics import router as subscriptions_metrics_router
+from api.company.settings import router as company_settings_router
+from api.company.dashboard import router as company_dashboard_router
 from api.advanced_settings.features import router as advanced_settings_router
 from api.advanced_settings.reset_sales import router as reset_sales_router
 from api.notifications.subscriptions import router as notifications_router
@@ -72,8 +74,7 @@ Base.metadata.create_all(bind=engine)
 
 # Run SQL migrations from database/migrations/
 # (ALTER TABLE / ADD COLUMN statements that depend on existing tables)
-# Desabilitar migrações SQL automáticas (executar manualmente no Supabase)
-# run_sql_migrations()
+run_sql_migrations()
 
 app = FastAPI(title="LomusTrack API")
 
@@ -137,6 +138,8 @@ ROUTERS = [
     users_manage_router,
     stripe_accounts_router,
     subscriptions_metrics_router,
+    company_settings_router,
+    company_dashboard_router,
     advanced_settings_router,
     reset_sales_router,
     notifications_router,

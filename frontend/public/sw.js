@@ -39,6 +39,9 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Ignora requisições de extensão, scripts do navegador e outros esquemas sem suporte
+  if (!['http:', 'https:'].includes(url.protocol)) return;
+
   // Ignora requisições não-GET e APIs do backend
   if (request.method !== 'GET') return;
   if (url.pathname.startsWith('/api/')) return;
