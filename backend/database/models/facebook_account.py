@@ -17,6 +17,9 @@ class FacebookAccount(Base):
     account_id = Column(String(100), unique=True, nullable=False)
     access_token = Column(String(500), nullable=False)
     business_id = Column(String(100), nullable=True)
+    status = Column(String(30), nullable=True, default="discovered")
+    is_active = Column(Boolean, nullable=False, default=False, server_default="false")
     token_valid = Column(Boolean, nullable=False, default=True, server_default="true")
+    last_sync_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=CREATED_AT_DEFAULT)
 

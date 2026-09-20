@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FacebookHeader } from "./components/FacebookHeader";
 import { FacebookTable } from "./components/FacebookTable";
 import { AddAccountModal } from "./components/AddAccountModal";
@@ -6,8 +6,18 @@ import { SyncAccountsModal } from "./components/SyncAccountsModal";
 import { UpdateTokenModal } from "./components/UpdateTokenModal";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { useFacebookAccounts } from "@/hooks/useFacebookAccounts";
+import { getCookie } from "@/lib/cookies";
 import { toast } from "sonner";
 import type { FacebookAccountAPI } from "@/services/integrations";
+
+type MetaAdAccount = {
+  id: number;
+  account_id: string;
+  name: string;
+  status: string;
+  is_active: boolean;
+  business_id?: string | null;
+};
 
 export default function FacebookAdsPage() {
   const {
@@ -24,6 +34,53 @@ export default function FacebookAdsPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [isUpdatingToken, setIsUpdatingToken] = useState(false);
   const [prefillToken, setPrefillToken] = useState<string | undefined>();
+  const [metaConnected, setMetaConnected] = useState(false);
+  const [metaProfileName, setMetaProfileName] = useState<string | null>(null);
+  const [metaAccounts, setMetaAccounts] = useState<MetaAdAccount[]>([]);
+  const [metaLoading, setMetaLoading] = useState(false);
+
+  const loadMetaAccounts = async () => {
+    try {
+      setMetaLoading(true);
+      const token = getCookie("access_token") || "";
+      const response = await fetch("/api/meta/adaccounts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || "Falha ao buscar contas da Meta");
+      }
+      const nextAccounts = data.accounts || [];
+      setMetaAccounts(nextAccounts);
+      setMetaProfileName(data.profile_name || null);
+      setMetaConnected(!!nextAccounts.length || !!data.profile_name);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Falha ao buscar contas da Meta";
+      toast.error(message);
+      setMetaAccounts([]);
+      setMetaConnected(false);
+    } finally {
+      setMetaLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const checkMetaStatus = async () => {
+      try {
+        const token = getCookie("access_token") || "";
+        const response = await fetch("/api/meta/status", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        setMetaConnected(Boolean(data.connected));
+        setMetaProfileName(data.account_name || null);
+        if (data.connected) await loadMetaAccounts();
+      } catch {
+        setMetaConnected(false);
+      }
+    };
+    void checkMetaStatus();
+  }, []);
 
   const openAddModal = () => {
     setPrefillToken(undefined);
@@ -95,7 +152,6 @@ export default function FacebookAdsPage() {
   const handleConfirmUpdateToken = async (accessToken: string) => {
     try {
       setIsUpdatingToken(true);
-      // Atualiza todas as contas do grupo (mesmo token)
       await Promise.all(updateTokenTargets.map((a) => updateToken(a.id, accessToken)));
       setUpdateTokenTargets([]);
       toast.success("Token atualizado com sucesso!");
@@ -111,9 +167,96 @@ export default function FacebookAdsPage() {
     ? `Tem certeza que deseja excluir as ${deleteTargets.length} contas de "${deleteLabel}"? Esta ação não pode ser desfeita.`
     : `Tem certeza que deseja excluir a conta "${deleteLabel}"? Esta ação não pode ser desfeita.`;
 
+  const toggleMetaAccount = async (accountId: number, checked: boolean) => {
+    try {
+      const token = getCookie("access_token") || "";
+      const response = await fetch(`/api/facebook/accounts/${accountId}/toggle`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ is_active: checked }),
+      });
+      if (!response.ok) throw new Error("Não foi possível salvar a seleção da conta");
+      setMetaAccounts((current) => current.map((account) => account.id === accountId ? { ...account, is_active: checked, status: checked ? "active" : "paused" } : account));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao atualizar a conta");
+    }
+  };
+
+  const toggleAllMetaAccounts = async (checked: boolean) => {
+    try {
+      const token = getCookie("access_token") || "";
+      await Promise.all(
+        metaAccounts.map((account) => fetch(`/api/facebook/accounts/${account.id}/toggle`, {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ is_active: checked }),
+        }))
+      );
+      setMetaAccounts((current) => current.map((account) => ({ ...account, is_active: checked, status: checked ? "active" : "paused" })));
+    } catch {
+      toast.error("Erro ao atualizar as contas selecionadas");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <FacebookHeader onAddAccount={openAddModal} />
+
+      {metaConnected && (
+        <div className="rounded-xl border bg-card p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Contas de Anúncio (Meta)</h2>
+              <p className="text-sm text-muted-foreground">
+                {metaProfileName ? `Perfil conectado: ${metaProfileName}` : "Perfil conectado"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleAllMetaAccounts(!metaAccounts.every((account) => account.is_active))}
+              className="rounded-md border px-3 py-2 text-sm font-medium"
+            >
+              Ativar todas
+            </button>
+          </div>
+
+          <p className="mb-3 text-sm text-muted-foreground">
+            {metaAccounts.length > 0
+              ? `Você possui ${metaAccounts.length} conta(s) de anúncio disponível(s).`
+              : metaLoading
+                ? "Buscando contas de anúncio..."
+                : "Nenhuma conta de anúncios foi encontrada para este perfil."}
+          </p>
+
+          {metaAccounts.length > 0 && (
+            <div className="space-y-3">
+              {metaAccounts.map((account) => (
+                <div key={account.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <div className="font-medium">{account.name}</div>
+                    <div className="text-xs text-muted-foreground">{account.status || "discovered"}</div>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={account.is_active}
+                      onChange={(event) => void toggleMetaAccount(account.id, event.target.checked)}
+                    />
+                    Ativado
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <FacebookTable
         accounts={accounts}
         isLoading={isLoading}

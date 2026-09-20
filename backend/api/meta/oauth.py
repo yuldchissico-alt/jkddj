@@ -191,8 +191,78 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
         ))
 
     db.commit()
+    account_label = (connection.account_name or account_name or profile.get("name") or "Meta Ads")
+    return RedirectResponse(
+        url=f"/facebook-ads?meta_status=connected&meta_account={quote(account_label)}",
+        status_code=302,
+    )
 
-    return RedirectResponse(url="/facebook-ads?meta_status=connected", status_code=302)
+
+@router.get("/adaccounts")
+async def meta_adaccounts(
+    db: Session = Depends(get_db),
+    current_user: Admin = Depends(get_current_user),
+):
+    connection = db.query(MetaConnection).filter(
+        MetaConnection.company_id == current_user.company_id,
+        MetaConnection.user_id == current_user.id,
+    ).order_by(MetaConnection.id.desc()).first()
+
+    if connection is None or not connection.access_token:
+        raise HTTPException(status_code=404, detail="Perfil Meta não conectado")
+
+    payload = await _fetch_meta_ad_accounts(connection.access_token)
+    accounts: list[dict] = []
+
+    for item in payload.get("data", []):
+        ad_account_id = _normalize_meta_ad_account_id(
+            item.get("account_id") or item.get("id")
+        )
+        if not ad_account_id:
+            continue
+
+        name = item.get("name") or item.get("account_name") or ad_account_id
+        existing = db.query(FacebookAccount).filter(
+            FacebookAccount.company_id == current_user.company_id,
+            FacebookAccount.account_id == ad_account_id,
+        ).first()
+
+        if existing:
+            existing.label = name
+            existing.business_id = existing.business_id or connection.account_id or connection.account_name or "meta_oauth"
+            existing.access_token = connection.access_token
+            existing.token_valid = True
+            existing.status = existing.status or "discovered"
+            stored = existing
+        else:
+            stored = FacebookAccount(
+                company_id=current_user.company_id,
+                label=name,
+                account_id=ad_account_id,
+                access_token=connection.access_token,
+                business_id=connection.account_id or "meta_oauth",
+                token_valid=True,
+                is_active=False,
+                status="discovered",
+            )
+            db.add(stored)
+            db.flush()
+
+        accounts.append({
+            "id": stored.id,
+            "account_id": stored.account_id,
+            "name": stored.label,
+            "status": stored.status or "discovered",
+            "is_active": bool(stored.is_active),
+            "business_id": stored.business_id,
+        })
+
+    db.commit()
+    return {
+        "profile_name": connection.account_name or connection.email or "Meta Ads",
+        "total": len(accounts),
+        "accounts": accounts,
+    }
 
 
 @router.get("/status")

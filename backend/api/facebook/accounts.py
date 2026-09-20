@@ -30,6 +30,8 @@ class FacebookAccountResponse(BaseModel):
     account_id: str
     access_token: str
     business_id: str | None = None
+    status: str | None = "discovered"
+    is_active: bool = False
     token_valid: bool = True
     created_at: datetime | None = None
 
@@ -126,6 +128,30 @@ async def create_accounts_bulk(
 
 class FacebookTokenUpdate(BaseModel):
     access_token: str
+
+
+class FacebookAccountToggle(BaseModel):
+    is_active: bool
+
+
+@router.patch("/accounts/{account_id}/toggle", response_model=FacebookAccountResponse)
+def toggle_account(
+    account_id: int,
+    payload: FacebookAccountToggle,
+    db: Session = Depends(get_db),
+    company_id: int = Depends(get_company_id),
+):
+    account = db.query(FacebookAccount).filter(
+        FacebookAccount.id == account_id,
+        FacebookAccount.company_id == company_id,
+    ).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Conta Facebook não encontrada")
+    account.is_active = payload.is_active
+    account.status = "active" if payload.is_active else "paused"
+    db.commit()
+    db.refresh(account)
+    return account
 
 
 @router.patch("/accounts/{account_id}/token", response_model=FacebookAccountResponse)

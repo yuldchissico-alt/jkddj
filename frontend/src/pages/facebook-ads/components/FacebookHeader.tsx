@@ -1,5 +1,6 @@
 import { RiMetaLine, RiAddCircleLine, RiLink, RiRefreshLine, RiCloseCircleLine } from "@remixicon/react";
 import { Button } from "@/components/ui/button";
+import { getCookie } from "@/lib/cookies";
 import { useEffect, useState } from "react";
 import { FacebookAdsGuide } from "./FacebookAdsGuide";
 
@@ -22,7 +23,7 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
   useEffect(() => {
     const loadStatus = async () => {
       try {
-        const token = document.cookie.split("access_token=")[1]?.split(";")[0] || "";
+        const token = getCookie("access_token") || "";
         const response = await fetch("/api/meta/status", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -36,18 +37,21 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
 
     const params = new URLSearchParams(window.location.search);
     const metaStatusParam = params.get("meta_status");
-
-    loadStatus();
+    const metaAccountParam = params.get("meta_account");
 
     if (metaStatusParam) {
+      setMetaStatus(metaStatusParam);
+      if (metaAccountParam) setMetaAccount(decodeURIComponent(metaAccountParam));
       window.history.replaceState({}, "", window.location.pathname);
     }
+
+    loadStatus();
   }, []);
 
   const connectMeta = async () => {
     setMetaStatus("connecting");
     try {
-      const token = document.cookie.split("access_token=")[1]?.split(";")[0] || "";
+      const token = getCookie("access_token") || "";
       const response = await fetch("/api/meta/connect", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -63,7 +67,7 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
   const disconnectMeta = async () => {
     setMetaStatus("not_connected");
     try {
-      const token = document.cookie.split("access_token=")[1]?.split(";")[0] || "";
+      const token = getCookie("access_token") || "";
       await fetch("/api/meta/disconnect", {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
