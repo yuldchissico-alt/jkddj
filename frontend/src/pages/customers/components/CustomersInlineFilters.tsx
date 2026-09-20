@@ -18,7 +18,7 @@ interface CustomersInlineFiltersProps {
   filterOptions: CustomersFilterOptions;
 }
 
-const platformLabels: Record<string, string> = { kiwify: "Kiwify", payt: "PayT", api: "API" };
+const platformLabels: Record<string, string> = { kiwify: "Kiwify", payt: "PayT", hotmart: "Hotmart", api: "API" };
 
 export function CustomersInlineFilters({
   filters, onFiltersChange, onClose, filterOptions,

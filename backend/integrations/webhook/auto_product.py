@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 PLATFORM_MAP: dict[PaymentPlatform, CheckoutPlatform | None] = {
     PaymentPlatform.KIWIFY: CheckoutPlatform.KIWIFY,
     PaymentPlatform.PAYT: CheckoutPlatform.PAYT,
+    PaymentPlatform.HOTMART: CheckoutPlatform.HOTMART,
     PaymentPlatform.API: None,  # API direta não tem checkout
 }
 

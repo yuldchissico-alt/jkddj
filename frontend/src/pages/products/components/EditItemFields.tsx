@@ -37,6 +37,7 @@ export function CheckoutFields({ url, setUrl, platform, setPlatform, checkoutCod
           <SelectContent>
             <SelectItem value="kiwify">Kiwify</SelectItem>
             <SelectItem value="payt">PayT</SelectItem>
+            <SelectItem value="hotmart">Hotmart</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -67,4 +67,4 @@ export interface ImportResultResponse {
 
 export type ImportStep = "platform" | "preview" | "result";
 
-export type ImportPlatform = "kiwify" | "payt";
+export type ImportPlatform = "kiwify" | "payt" | "hotmart";

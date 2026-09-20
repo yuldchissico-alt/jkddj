@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 # Ex: WebhookPlatform.API → armazena 'API', não 'api'.
 _NEW_ENUM_VALUES = [
     ("webhookplatform", "API"),
+    ("webhookplatform", "HOTMART"),
     ("paymentplatform", "API"),
+    ("paymentplatform", "HOTMART"),
     ("transactionstatus", "TRIAL"),
     ("recoverytype", "TRIAL"),
 ]
@@ -26,10 +28,10 @@ _DATA_FIXES: dict[tuple[str, str], dict[str, str]] = {
         "trial": "TRIAL",
     },
     ("transactions", "platform"): {
-        "kiwify": "KIWIFY", "payt": "PAYT", "api": "API",
+        "kiwify": "KIWIFY", "payt": "PAYT", "hotmart": "HOTMART", "api": "API",
     },
     ("webhook_endpoints", "platform"): {
-        "kiwify": "KIWIFY", "payt": "PAYT", "api": "API",
+        "kiwify": "KIWIFY", "payt": "PAYT", "hotmart": "HOTMART", "api": "API",
     },
     ("recoveries", "type"): {
         "abandoned_cart": "ABANDONED_CART",
@@ -42,7 +44,7 @@ _DATA_FIXES: dict[tuple[str, str], dict[str, str]] = {
         "back_redirect": "BACK_REDIRECT", "other": "OTHER",
     },
     ("checkouts", "platform"): {
-        "kiwify": "KIWIFY", "payt": "PAYT",
+        "kiwify": "KIWIFY", "payt": "PAYT", "hotmart": "HOTMART",
     },
     ("campaign_markers", "marker_type"): {
         "video": "VIDEO", "checkout": "CHECKOUT",

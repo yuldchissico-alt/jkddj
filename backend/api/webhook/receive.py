@@ -6,6 +6,7 @@ from database.core.connection import get_db
 from database.models.webhook_endpoint import WebhookEndpoint, WebhookPlatform
 from integrations.webhook.kiwify import parse_kiwify_webhook
 from integrations.webhook.payt import parse_payt_webhook
+from integrations.webhook.hotmart import parse_hotmart_webhook
 from integrations.webhook.api_direct import parse_api_webhook
 from integrations.webhook.processor import process_webhook_event
 from integrations.webhook.test_emails import is_test_email
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/webhook", tags=["webhook-receiver"])
 PARSERS = {
     WebhookPlatform.KIWIFY: parse_kiwify_webhook,
     WebhookPlatform.PAYT: parse_payt_webhook,
+    WebhookPlatform.HOTMART: parse_hotmart_webhook,
     WebhookPlatform.API: parse_api_webhook,
 }
 

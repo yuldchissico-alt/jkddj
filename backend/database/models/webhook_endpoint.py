@@ -10,6 +10,7 @@ import enum
 class WebhookPlatform(str, enum.Enum):
     KIWIFY = "kiwify"
     PAYT = "payt"
+    HOTMART = "hotmart"
     API = "api"
 
 

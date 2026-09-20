@@ -11,12 +11,12 @@ import { PlatformLogo } from "@/components/PlatformLogo";
 interface CreateWebhookModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (platform: "kiwify" | "payt" | "api", name: string) => void;
+  onCreate: (platform: "kiwify" | "payt" | "hotmart" | "api", name: string) => void;
   isLoading?: boolean;
 }
 
 export function CreateWebhookModal({ open, onOpenChange, onCreate, isLoading }: CreateWebhookModalProps) {
-  const [platform, setPlatform] = useState<"kiwify" | "payt" | "api" | null>(null);
+  const [platform, setPlatform] = useState<"kiwify" | "payt" | "hotmart" | "api" | null>(null);
   const [name, setName] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -44,8 +44,8 @@ export function CreateWebhookModal({ open, onOpenChange, onCreate, isLoading }: 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label>Plataforma</Label>
-          <div className="grid grid-cols-3 gap-3">
-              {(["kiwify", "payt", "api"] as const).map((p) => (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+              {(["kiwify", "payt", "hotmart", "api"] as const).map((p) => (
                 <button
                   key={p}
                   type="button"
@@ -60,10 +60,10 @@ export function CreateWebhookModal({ open, onOpenChange, onCreate, isLoading }: 
                 >
                   <PlatformLogo platform={p} size="lg" showLabel={false} />
                   <span className="text-sm font-semibold">
-                    {p === "payt" ? "PayT" : p === "kiwify" ? "Kiwify" : "API"}
+                    {p === "payt" ? "PayT" : p === "kiwify" ? "Kiwify" : p === "hotmart" ? "Hotmart" : "API"}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {p === "kiwify" ? "Produtos digitais" : p === "payt" ? "Gateway pagamento" : "Integração direta"}
+                  <span className="text-[10px] text-muted-foreground text-center">
+                    {p === "kiwify" ? "Produtos digitais" : p === "payt" ? "Gateway pagamento" : p === "hotmart" ? "Produtos digitais" : "Integração direta"}
                   </span>
                 </button>
               ))}
