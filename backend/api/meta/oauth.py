@@ -132,7 +132,14 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Meta não retornou access token")
 
     profile = await _fetch_meta_profile(access_token)
-    account_id = profile.get("id")
+    ad_accounts = await _fetch_meta_ad_accounts(access_token)
+    account_id, account_name = _choose_primary_ad_account(ad_accounts)
+
+    if not account_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Nenhuma conta de anúncios foi encontrada para esta conta Meta. Verifique as permissões de anúncio e o acesso à conta da Meta.",
+        )
 
     connection = db.query(MetaConnection).filter(
         MetaConnection.company_id == company_id,
@@ -147,7 +154,7 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
         db.add(connection)
 
     connection.account_id = account_id
-    connection.account_name = profile.get("name") or profile.get("account_name")
+    connection.account_name = account_name or profile.get("name") or profile.get("account_name")
     connection.email = profile.get("email")
     connection.access_token = access_token
     connection.refresh_token = refresh_token
@@ -243,6 +250,48 @@ def disconnect_meta(db: Session = Depends(get_db), current_user: Admin = Depends
     ).delete()
     db.commit()
     return {"status": "disconnected"}
+
+
+def _normalize_meta_ad_account_id(value: str | int | None) -> str | None:
+    if value is None:
+        return None
+
+    normalized = str(value).strip()
+    if not normalized:
+        return None
+    if normalized.startswith("act_"):
+        return normalized
+    if normalized.isdigit():
+        return f"act_{normalized}"
+    return normalized
+
+
+def _choose_primary_ad_account(payload: dict) -> tuple[str | None, str | None]:
+    for account in payload.get("data", []):
+        if not isinstance(account, dict):
+            continue
+
+        ad_account_id = account.get("account_id") or account.get("id")
+        ad_account_name = account.get("name") or account.get("account_name") or "Meta Ads"
+        normalized_id = _normalize_meta_ad_account_id(ad_account_id)
+        if normalized_id:
+            return normalized_id, str(ad_account_name)
+
+    return None, None
+
+
+async def _fetch_meta_ad_accounts(access_token: str) -> dict:
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        response = await client.get(
+            "https://graph.facebook.com/me/adaccounts",
+            params={
+                "fields": "account_id,id,name",
+                "access_token": access_token,
+                "limit": 100,
+            },
+        )
+        response.raise_for_status()
+        return response.json()
 
 
 async def _fetch_meta_profile(access_token: str) -> dict:
