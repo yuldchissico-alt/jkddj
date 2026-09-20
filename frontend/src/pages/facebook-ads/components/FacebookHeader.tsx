@@ -1,6 +1,5 @@
 import { RiMetaLine, RiAddCircleLine, RiLink, RiRefreshLine, RiCloseCircleLine } from "@remixicon/react";
 import { Button } from "@/components/ui/button";
-import { getCookie } from "@/lib/cookies";
 import { useEffect, useState } from "react";
 import { FacebookAdsGuide } from "./FacebookAdsGuide";
 
@@ -23,7 +22,7 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
   useEffect(() => {
     const loadStatus = async () => {
       try {
-        const token = getCookie("access_token") || "";
+        const token = document.cookie.split("access_token=")[1]?.split(";")[0] || "";
         const response = await fetch("/api/meta/status", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -37,21 +36,18 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
 
     const params = new URLSearchParams(window.location.search);
     const metaStatusParam = params.get("meta_status");
-    const metaAccountParam = params.get("meta_account");
-
-    if (metaStatusParam) {
-      setMetaStatus(metaStatusParam);
-      if (metaAccountParam) setMetaAccount(decodeURIComponent(metaAccountParam));
-      window.history.replaceState({}, "", window.location.pathname);
-    }
 
     loadStatus();
+
+    if (metaStatusParam) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }, []);
 
   const connectMeta = async () => {
     setMetaStatus("connecting");
     try {
-      const token = getCookie("access_token") || "";
+      const token = document.cookie.split("access_token=")[1]?.split(";")[0] || "";
       const response = await fetch("/api/meta/connect", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -67,7 +63,7 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
   const disconnectMeta = async () => {
     setMetaStatus("not_connected");
     try {
-      const token = getCookie("access_token") || "";
+      const token = document.cookie.split("access_token=")[1]?.split(";")[0] || "";
       await fetch("/api/meta/disconnect", {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -84,9 +80,9 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
           <RiMetaLine className="size-5 text-[#1877F2]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Facebook Ads</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Meta Ads</h1>
           <p className="text-sm text-muted-foreground">
-            Gerencie suas contas de anúncio do Facebook
+            Conecte seus perfis e gerencie suas contas de anúncio
           </p>
         </div>
       </div>
@@ -98,7 +94,7 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
         <FacebookAdsGuide />
         <Button onClick={connectMeta} className="gap-1.5 h-9" variant={metaStatus === "connected" ? "secondary" : "default"}>
           {metaStatus === "connected" ? <RiRefreshLine className="size-4" /> : <RiLink className="size-4" />}
-          {metaStatus === "connected" ? "Reautorizar Meta" : "Conectar Meta/Facebook"}
+          {metaStatus === "connected" ? "Adicionar perfil" : "Adicionar perfil"}
         </Button>
         {metaStatus === "connected" && (
           <Button onClick={disconnectMeta} variant="outline" className="gap-1.5 h-9 text-destructive border-destructive/30">

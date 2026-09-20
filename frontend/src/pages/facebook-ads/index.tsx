@@ -228,14 +228,33 @@ export default function FacebookAdsPage() {
     <div className="flex flex-col gap-6 p-6">
       <FacebookHeader onAddAccount={openAddModal} />
 
+      <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Meta Ads</h2>
+            <p className="text-sm text-muted-foreground">Conecte seus perfis por aqui:</p>
+          </div>
+          <div className="ml-auto text-sm text-muted-foreground">⋮</div>
+        </div>
+
+        {metaConnected && metaProfileName ? (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3">
+            <span className="font-medium">{metaProfileName}</span>
+            <span className="text-xs text-muted-foreground">Perfil conectado</span>
+          </div>
+        ) : (
+          <div className="mb-4 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+            Nenhum perfil conectado ainda.
+          </div>
+        )}
+      </div>
+
       {metaConnected && (
         <div className="rounded-xl border bg-card p-4 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">Contas de Anúncio (Meta)</h2>
-              <p className="text-sm text-muted-foreground">
-                {metaProfileName ? `Perfil conectado: ${metaProfileName}` : "Perfil conectado"}
-              </p>
+              <p className="text-sm text-muted-foreground">Escolha suas contas de anúncio:</p>
             </div>
             <button
               type="button"
@@ -248,7 +267,7 @@ export default function FacebookAdsPage() {
 
           <p className="mb-3 text-sm text-muted-foreground">
             {metaAccounts.length > 0
-              ? `Você possui ${metaAccounts.length} conta(s) de anúncio disponível(s).`
+              ? `Foram encontradas ${metaAccounts.length} conta(s) de anúncio.`
               : metaLoading
                 ? "Buscando contas de anúncio..."
                 : "Nenhuma conta de anúncios foi encontrada para este perfil."}
@@ -260,7 +279,9 @@ export default function FacebookAdsPage() {
                 <div key={account.id} className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <div className="font-medium">{account.name}</div>
-                    <div className="text-xs text-muted-foreground">{account.status || "discovered"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {account.status || "discovered"}
+                    </div>
                   </div>
                   <label className="flex items-center gap-2 text-sm">
                     <input

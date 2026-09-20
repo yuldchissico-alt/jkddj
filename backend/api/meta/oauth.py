@@ -1,6 +1,7 @@
+import logging
 import os
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -14,6 +15,8 @@ from database.core.connection import get_db
 from database.models.admin import Admin
 from database.models.facebook_account import FacebookAccount
 from database.models.meta_connection import MetaConnection
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/meta", tags=["meta"])
 
@@ -131,23 +134,8 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
     if not access_token:
         raise HTTPException(status_code=400, detail="Meta não retornou access token")
 
-    try:
-        profile = await _fetch_meta_profile(access_token)
-    except Exception as exc:
-        detail = f"Falha ao buscar perfil da conta Meta: {exc}"
-        return RedirectResponse(url=f"/facebook-ads?meta_status=error&detail={quote(detail)}", status_code=302)
-
-    try:
-        ad_accounts = await _fetch_meta_ad_accounts(access_token)
-    except Exception as exc:
-        detail = f"Falha ao listar contas de anúncios da Meta: {exc}"
-        return RedirectResponse(url=f"/facebook-ads?meta_status=error&detail={quote(detail)}", status_code=302)
-
-    account_id, account_name = _choose_primary_ad_account(ad_accounts)
-
-    if not account_id:
-        detail = "Nenhuma conta de anúncios foi encontrada para esta conta Meta. Verifique as permissões de anúncio e o acesso à conta da Meta."
-        return RedirectResponse(url=f"/facebook-ads?meta_status=error&detail={quote(detail)}", status_code=302)
+    profile = await _fetch_meta_profile(access_token)
+    account_id = profile.get("id")
 
     connection = db.query(MetaConnection).filter(
         MetaConnection.company_id == company_id,
@@ -162,7 +150,7 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
         db.add(connection)
 
     connection.account_id = account_id
-    connection.account_name = account_name or profile.get("name") or profile.get("account_name")
+    connection.account_name = profile.get("name") or profile.get("account_name")
     connection.email = profile.get("email")
     connection.access_token = access_token
     connection.refresh_token = refresh_token
@@ -191,78 +179,8 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
         ))
 
     db.commit()
-    account_label = (connection.account_name or account_name or profile.get("name") or "Meta Ads")
-    return RedirectResponse(
-        url=f"/facebook-ads?meta_status=connected&meta_account={quote(account_label)}",
-        status_code=302,
-    )
 
-
-@router.get("/adaccounts")
-async def meta_adaccounts(
-    db: Session = Depends(get_db),
-    current_user: Admin = Depends(get_current_user),
-):
-    connection = db.query(MetaConnection).filter(
-        MetaConnection.company_id == current_user.company_id,
-        MetaConnection.user_id == current_user.id,
-    ).order_by(MetaConnection.id.desc()).first()
-
-    if connection is None or not connection.access_token:
-        raise HTTPException(status_code=404, detail="Perfil Meta não conectado")
-
-    payload = await _fetch_meta_ad_accounts(connection.access_token)
-    accounts: list[dict] = []
-
-    for item in payload.get("data", []):
-        ad_account_id = _normalize_meta_ad_account_id(
-            item.get("account_id") or item.get("id")
-        )
-        if not ad_account_id:
-            continue
-
-        name = item.get("name") or item.get("account_name") or ad_account_id
-        existing = db.query(FacebookAccount).filter(
-            FacebookAccount.company_id == current_user.company_id,
-            FacebookAccount.account_id == ad_account_id,
-        ).first()
-
-        if existing:
-            existing.label = name
-            existing.business_id = existing.business_id or connection.account_id or connection.account_name or "meta_oauth"
-            existing.access_token = connection.access_token
-            existing.token_valid = True
-            existing.status = existing.status or "discovered"
-            stored = existing
-        else:
-            stored = FacebookAccount(
-                company_id=current_user.company_id,
-                label=name,
-                account_id=ad_account_id,
-                access_token=connection.access_token,
-                business_id=connection.account_id or "meta_oauth",
-                token_valid=True,
-                is_active=False,
-                status="discovered",
-            )
-            db.add(stored)
-            db.flush()
-
-        accounts.append({
-            "id": stored.id,
-            "account_id": stored.account_id,
-            "name": stored.label,
-            "status": stored.status or "discovered",
-            "is_active": bool(stored.is_active),
-            "business_id": stored.business_id,
-        })
-
-    db.commit()
-    return {
-        "profile_name": connection.account_name or connection.email or "Meta Ads",
-        "total": len(accounts),
-        "accounts": accounts,
-    }
+    return RedirectResponse(url="/facebook-ads?meta_status=connected", status_code=302)
 
 
 @router.get("/status")
@@ -307,6 +225,76 @@ def meta_status(db: Session = Depends(get_db), current_user: Admin = Depends(get
     }
 
 
+@router.get("/adaccounts")
+async def meta_adaccounts(db: Session = Depends(get_db), current_user: Admin = Depends(get_current_user)):
+    connection = db.query(MetaConnection).filter(
+        MetaConnection.company_id == current_user.company_id,
+        MetaConnection.user_id == current_user.id,
+    ).order_by(MetaConnection.id.desc()).first()
+
+    if connection is None or not connection.access_token:
+        return {"profile_name": None, "accounts": []}
+
+    try:
+        discovered = await _fetch_meta_adaccounts(connection.access_token)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Erro ao buscar contas de anúncio da Meta para o usuário %s", current_user.id)
+        raise HTTPException(status_code=502, detail=f"Falha ao buscar contas da Meta: {exc}")
+
+    saved_accounts = []
+    seen_ids = set()
+    for account in discovered:
+        account_id = account.get("account_id") or account.get("id")
+        if not account_id:
+            continue
+        seen_ids.add(str(account_id))
+
+        existing = db.query(FacebookAccount).filter(
+            FacebookAccount.company_id == current_user.company_id,
+            FacebookAccount.account_id == str(account_id),
+        ).first()
+
+        if existing:
+            existing.label = account.get("name") or existing.label
+            existing.business_id = account.get("business_id") or existing.business_id
+            existing.status = account.get("status") or existing.status or "discovered"
+            existing.token_valid = True
+            existing.is_active = bool(existing.is_active)
+            db.add(existing)
+            saved_account = existing
+        else:
+            saved_account = FacebookAccount(
+                company_id=current_user.company_id,
+                label=account.get("name") or f"Meta Ads {account_id}",
+                account_id=str(account_id),
+                access_token=connection.access_token,
+                business_id=account.get("business_id"),
+                status=account.get("status") or "discovered",
+                is_active=False,
+                token_valid=True,
+            )
+            db.add(saved_account)
+            db.flush()
+
+        saved_accounts.append({
+            "id": saved_account.id,
+            "account_id": str(saved_account.account_id),
+            "name": saved_account.label,
+            "status": saved_account.status or "discovered",
+            "is_active": bool(saved_account.is_active),
+            "business_id": saved_account.business_id,
+        })
+
+    db.commit()
+    return {
+        "profile_name": connection.account_name,
+        "accounts": saved_accounts,
+        "total": len(saved_accounts),
+    }
+
+
 @router.delete("/disconnect")
 def disconnect_meta(db: Session = Depends(get_db), current_user: Admin = Depends(get_current_user)):
     connection = db.query(MetaConnection).filter(
@@ -330,48 +318,6 @@ def disconnect_meta(db: Session = Depends(get_db), current_user: Admin = Depends
     return {"status": "disconnected"}
 
 
-def _normalize_meta_ad_account_id(value: str | int | None) -> str | None:
-    if value is None:
-        return None
-
-    normalized = str(value).strip()
-    if not normalized:
-        return None
-    if normalized.startswith("act_"):
-        return normalized
-    if normalized.isdigit():
-        return f"act_{normalized}"
-    return normalized
-
-
-def _choose_primary_ad_account(payload: dict) -> tuple[str | None, str | None]:
-    for account in payload.get("data", []):
-        if not isinstance(account, dict):
-            continue
-
-        ad_account_id = account.get("account_id") or account.get("id")
-        ad_account_name = account.get("name") or account.get("account_name") or "Meta Ads"
-        normalized_id = _normalize_meta_ad_account_id(ad_account_id)
-        if normalized_id:
-            return normalized_id, str(ad_account_name)
-
-    return None, None
-
-
-async def _fetch_meta_ad_accounts(access_token: str) -> dict:
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        response = await client.get(
-            "https://graph.facebook.com/me/adaccounts",
-            params={
-                "fields": "account_id,id,name",
-                "access_token": access_token,
-                "limit": 100,
-            },
-        )
-        response.raise_for_status()
-        return response.json()
-
-
 async def _fetch_meta_profile(access_token: str) -> dict:
     async with httpx.AsyncClient(timeout=20.0) as client:
         response = await client.get(
@@ -391,3 +337,42 @@ async def _fetch_meta_profile(access_token: str) -> dict:
         "user_id": None,
         "permissions": [],
     }
+
+
+async def _fetch_meta_adaccounts(access_token: str) -> list[dict]:
+    async with httpx.AsyncClient(timeout=25.0) as client:
+        response = await client.get(
+            f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/adaccounts",
+            params={
+                "fields": "account_id,id,name,status,owner_business,business",
+                "access_token": access_token,
+                "limit": 100,
+            },
+        )
+
+        if response.status_code != 200:
+            payload = response.json()
+            error_payload = payload.get("error", {}) if isinstance(payload, dict) else {}
+            message = error_payload.get("message") or response.text
+            logger.error("Meta adaccounts fetch failed: status=%s payload=%s", response.status_code, payload)
+            raise HTTPException(status_code=502, detail=f"Meta API error: {message}")
+
+        payload = response.json()
+        accounts = payload.get("data", [])
+        normalized = []
+        for item in accounts:
+            account_id = item.get("account_id") or item.get("id")
+            if not account_id:
+                continue
+            normalized.append({
+                "account_id": str(account_id),
+                "id": str(account_id),
+                "name": item.get("name") or f"Meta Ads {account_id}",
+                "status": (item.get("status") or "discovered").upper(),
+                "business_id": (
+                    item.get("owner_business", {}).get("id")
+                    if isinstance(item.get("owner_business"), dict)
+                    else item.get("business_id")
+                ) or None,
+            })
+        return normalized
