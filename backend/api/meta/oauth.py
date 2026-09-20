@@ -3,6 +3,8 @@ import os
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
+from starlette.datastructures import URL
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -85,8 +87,13 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
     error = request.query_params.get("error")
     error_description = request.query_params.get("error_description")
 
+    def redirect_error(detail: str) -> RedirectResponse:
+        redirect_url = URL("/facebook-ads")
+        query = urlencode({"meta_status": "error", "detail": detail[:500]})
+        return RedirectResponse(url=f"{redirect_url}?{query}", status_code=302)
+
     if error:
-        return RedirectResponse(url=f"/facebook-ads?meta_status=error&detail={error_description or error}", status_code=302)
+        return redirect_error(error_description or error)
 
     if not code or not state:
         raise HTTPException(status_code=400, detail="Código de autorização ou state ausentes")
@@ -124,7 +131,8 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
             token_response.raise_for_status()
             token_data = token_response.json()
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Falha ao trocar code por token: {exc}")
+        logger.exception("Erro ao trocar code por access token da Meta")
+        return redirect_error(f"Falha ao trocar code por token: {exc}")
 
     access_token = token_data.get("access_token")
     refresh_token = token_data.get("refresh_token")
@@ -132,10 +140,20 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(expires_in)) if expires_in else None
 
     if not access_token:
-        raise HTTPException(status_code=400, detail="Meta não retornou access token")
+        return redirect_error("Meta não retornou access token")
 
-    profile = await _fetch_meta_profile(access_token)
+    try:
+        profile = await _fetch_meta_profile(access_token)
+    except HTTPException as exc:
+        logger.exception("Erro ao buscar perfil da Meta no callback")
+        return redirect_error(str(exc.detail) if hasattr(exc, "detail") else str(exc))
+    except Exception as exc:
+        logger.exception("Erro inesperado ao buscar perfil da Meta no callback")
+        return redirect_error(str(exc))
+
     account_id = profile.get("id")
+    if not account_id:
+        return redirect_error("Meta não retornou o perfil do usuário autenticado")
 
     connection = db.query(MetaConnection).filter(
         MetaConnection.company_id == company_id,
@@ -321,13 +339,17 @@ def disconnect_meta(db: Session = Depends(get_db), current_user: Admin = Depends
 async def _fetch_meta_profile(access_token: str) -> dict:
     async with httpx.AsyncClient(timeout=20.0) as client:
         response = await client.get(
-            "https://graph.facebook.com/me",
+            f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me",
             params={
                 "fields": "id,name,email",
                 "access_token": access_token,
             },
         )
-        response.raise_for_status()
+        if response.status_code != 200:
+            payload = response.json()
+            error_payload = payload.get("error", {}) if isinstance(payload, dict) else {}
+            message = error_payload.get("message") or response.text
+            raise HTTPException(status_code=502, detail=f"Meta profile error: {message}")
         payload = response.json()
     return {
         "id": payload.get("id"),
