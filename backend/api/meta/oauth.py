@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -131,15 +131,23 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
     if not access_token:
         raise HTTPException(status_code=400, detail="Meta não retornou access token")
 
-    profile = await _fetch_meta_profile(access_token)
-    ad_accounts = await _fetch_meta_ad_accounts(access_token)
+    try:
+        profile = await _fetch_meta_profile(access_token)
+    except Exception as exc:
+        detail = f"Falha ao buscar perfil da conta Meta: {exc}"
+        return RedirectResponse(url=f"/facebook-ads?meta_status=error&detail={quote(detail)}", status_code=302)
+
+    try:
+        ad_accounts = await _fetch_meta_ad_accounts(access_token)
+    except Exception as exc:
+        detail = f"Falha ao listar contas de anúncios da Meta: {exc}"
+        return RedirectResponse(url=f"/facebook-ads?meta_status=error&detail={quote(detail)}", status_code=302)
+
     account_id, account_name = _choose_primary_ad_account(ad_accounts)
 
     if not account_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Nenhuma conta de anúncios foi encontrada para esta conta Meta. Verifique as permissões de anúncio e o acesso à conta da Meta.",
-        )
+        detail = "Nenhuma conta de anúncios foi encontrada para esta conta Meta. Verifique as permissões de anúncio e o acesso à conta da Meta."
+        return RedirectResponse(url=f"/facebook-ads?meta_status=error&detail={quote(detail)}", status_code=302)
 
     connection = db.query(MetaConnection).filter(
         MetaConnection.company_id == company_id,
