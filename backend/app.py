@@ -23,6 +23,7 @@ from api.products.crud import router as products_router
 from api.products.items import router as product_items_router
 from api.products.stats import router as product_stats_router
 from api.products.aliases import router as product_aliases_router
+from api.meta.oauth import router as meta_oauth_router
 from api.funnel.data import router as funnel_router
 from api.sales.transactions import router as sales_router
 from api.sales.delete import router as sales_delete_router
@@ -59,6 +60,7 @@ from api.advanced_settings.features import router as advanced_settings_router
 from api.advanced_settings.reset_sales import router as reset_sales_router
 from api.notifications.subscriptions import router as notifications_router
 from api.superadmin.companies import router as superadmin_router
+from api.utm.tracking import router as utm_tracking_router
 
 from database.core.migrate_sql import run_sql_migrations
 
@@ -101,6 +103,7 @@ app.include_router(products_router, prefix="/api")
 app.include_router(product_items_router, prefix="/api")
 app.include_router(product_stats_router, prefix="/api")
 app.include_router(product_aliases_router, prefix="/api")
+app.include_router(meta_oauth_router, prefix="/api")
 app.include_router(funnel_router, prefix="/api")
 app.include_router(sales_router, prefix="/api")
 app.include_router(sales_delete_router, prefix="/api")
@@ -137,6 +140,7 @@ app.include_router(advanced_settings_router, prefix="/api")
 app.include_router(reset_sales_router, prefix="/api")
 app.include_router(notifications_router, prefix="/api")
 app.include_router(superadmin_router, prefix="/api")  # Painel Super Admin
+app.include_router(utm_tracking_router, prefix="/api")
 
 # SPA Middleware (serves frontend in production)
 _frontend_dir = os.path.join(os.path.dirname(__file__), "frontend_dist")

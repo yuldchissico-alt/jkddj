@@ -6,7 +6,6 @@ import type { ColumnPreset } from "./columnPresets";
 import { BlurToggle, type BlurState } from "./BlurToggle";
 import { UtmParamsGuide } from "./UtmParamsGuide";
 import { RefreshButton } from "@/components/RefreshButton";
-import { NotificationBell } from "@/components/NotificationBell";
 import type { UnidentifiedProduct } from "@/services/campaigns";
 import { PresetTab } from "./PresetTab";
 
@@ -85,7 +84,6 @@ export function CampaignsHeader({
             >
               <RiSettings3Line className="size-4" />
             </Button>
-            <NotificationBell />
             <RefreshButton onRefresh={onRefresh} />
           </div>
         </div>

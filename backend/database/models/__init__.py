@@ -14,6 +14,8 @@ from database.models.gemini_account import GeminiAccount
 from database.models.campaign_action import CampaignAction, ActionType
 from database.models.stripe_account import StripeAccount
 from database.models.product_alias import ProductAlias
+from database.models.meta_connection import MetaConnection
+from database.models.utm_click import UTMClick, UTMConversion
 
 __all__ = [
     "Admin",
@@ -41,4 +43,7 @@ __all__ = [
     "ActionType",
     "StripeAccount",
     "ProductAlias",
+    "MetaConnection",
+    "UTMClick",
+    "UTMConversion",
 ]
