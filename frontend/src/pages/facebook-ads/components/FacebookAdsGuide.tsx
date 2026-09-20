@@ -61,7 +61,7 @@ const SECTIONS = [
     steps: [
       'Na tela "Usuários do sistema", selecione o usuário e clique em "Gerar novo token"',
       'Selecione o app que você criou na lista',
-      'Em permissões, marque: ads_read, ads_management, business_management, read_insights',
+      'Em permissões, use apenas as permissões válidas do OAuth/Marketing API que seu fluxo realmente precisa; os Insights são lidos depois da autorização via Marketing API.',
       'Defina a validade como "Sem data de validade" (token permanente)',
       'Clique em "Gerar token" e copie o token exibido — guarde em local seguro!',
       'Cole esse token no campo "Access Token" do modal de configuração aqui no Nexuscale',

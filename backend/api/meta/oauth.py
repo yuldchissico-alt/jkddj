@@ -21,12 +21,11 @@ META_APP_ID = os.getenv("META_APP_ID", "")
 META_APP_SECRET = os.getenv("META_APP_SECRET", "")
 META_REDIRECT_URI = os.getenv("META_REDIRECT_URI", "http://localhost:8000/api/meta/callback")
 META_GRAPH_API_VERSION = os.getenv("META_GRAPH_API_VERSION", "v25.0")
+# OAuth scopes must be valid Facebook Login permissions. Marketing API data access happens after authorization.
 META_SCOPES = ",".join([
-    "ads_management",
     "ads_read",
     "business_management",
     "pages_show_list",
-    "read_insights",
     "public_profile",
 ])
 
