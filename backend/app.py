@@ -93,54 +93,59 @@ app.add_middleware(
 )
 
 # API routes
-app.include_router(setup_router, prefix="/api")
-app.include_router(login_router, prefix="/api")
-app.include_router(profile_router, prefix="/api")
-app.include_router(facebook_router, prefix="/api")
-app.include_router(facebook_discover_router, prefix="/api")
-app.include_router(platforms_router, prefix="/api")
-app.include_router(products_router, prefix="/api")
-app.include_router(product_items_router, prefix="/api")
-app.include_router(product_stats_router, prefix="/api")
-app.include_router(product_aliases_router, prefix="/api")
-app.include_router(meta_oauth_router, prefix="/api")
-app.include_router(funnel_router, prefix="/api")
-app.include_router(sales_router, prefix="/api")
-app.include_router(sales_delete_router, prefix="/api")
-app.include_router(customers_router, prefix="/api")
-app.include_router(customers_filter_options_router, prefix="/api")
-app.include_router(dashboard_router, prefix="/api")
-app.include_router(campaigns_data_router, prefix="/api")
-app.include_router(campaigns_toggle_router, prefix="/api")
-app.include_router(campaigns_budget_router, prefix="/api")
-app.include_router(campaigns_presets_router, prefix="/api")
-app.include_router(campaigns_tags_router, prefix="/api")
-app.include_router(campaigns_markers_router, prefix="/api")
-app.include_router(campaigns_filters_router, prefix="/api")
-app.include_router(campaigns_conversion_router, prefix="/api")
-app.include_router(campaigns_ai_action_router, prefix="/api")
-app.include_router(campaigns_export_details_router, prefix="/api")
-app.include_router(webhook_receiver_router, prefix="/api")
-app.include_router(import_preview_router, prefix="/api")
-app.include_router(import_execute_router, prefix="/api")
-app.include_router(gemini_accounts_router, prefix="/api")
-app.include_router(gemini_models_router, prefix="/api")
-app.include_router(gemini_chat_router, prefix="/api")
-app.include_router(gemini_daily_report_router, prefix="/api")
-app.include_router(ai_training_router, prefix="/api")
-app.include_router(campaign_create_fetch_router, prefix="/api")
-app.include_router(campaign_create_router, prefix="/api")
-app.include_router(campaign_create_export_router, prefix="/api")
-app.include_router(users_list_router, prefix="/api")
-app.include_router(users_invite_router, prefix="/api")
-app.include_router(users_manage_router, prefix="/api")
-app.include_router(stripe_accounts_router, prefix="/api")
-app.include_router(subscriptions_metrics_router, prefix="/api")
-app.include_router(advanced_settings_router, prefix="/api")
-app.include_router(reset_sales_router, prefix="/api")
-app.include_router(notifications_router, prefix="/api")
-app.include_router(superadmin_router, prefix="/api")  # Painel Super Admin
-app.include_router(utm_tracking_router, prefix="/api")
+ROUTERS = [
+    setup_router,
+    login_router,
+    profile_router,
+    facebook_router,
+    facebook_discover_router,
+    platforms_router,
+    products_router,
+    product_items_router,
+    product_stats_router,
+    product_aliases_router,
+    meta_oauth_router,
+    funnel_router,
+    sales_router,
+    sales_delete_router,
+    customers_router,
+    customers_filter_options_router,
+    dashboard_router,
+    campaigns_data_router,
+    campaigns_toggle_router,
+    campaigns_budget_router,
+    campaigns_presets_router,
+    campaigns_tags_router,
+    campaigns_markers_router,
+    campaigns_filters_router,
+    campaigns_conversion_router,
+    campaigns_ai_action_router,
+    campaigns_export_details_router,
+    webhook_receiver_router,
+    import_preview_router,
+    import_execute_router,
+    gemini_accounts_router,
+    gemini_models_router,
+    gemini_chat_router,
+    gemini_daily_report_router,
+    ai_training_router,
+    campaign_create_fetch_router,
+    campaign_create_router,
+    campaign_create_export_router,
+    users_list_router,
+    users_invite_router,
+    users_manage_router,
+    stripe_accounts_router,
+    subscriptions_metrics_router,
+    advanced_settings_router,
+    reset_sales_router,
+    notifications_router,
+    superadmin_router,
+    utm_tracking_router,
+]
+
+for router in ROUTERS:
+    app.include_router(router, prefix="/api")
 
 # SPA Middleware (serves frontend in production)
 _frontend_dir = os.path.join(os.path.dirname(__file__), "frontend_dist")
