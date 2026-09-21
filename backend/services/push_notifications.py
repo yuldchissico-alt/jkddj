@@ -19,6 +19,12 @@ class PushNotificationService:
         
         if not self.vapid_private_key or not self.vapid_public_key:
             print("⚠️  VAPID keys não configuradas. Push notifications desabilitadas.")
+
+    def has_vapid_config(self) -> bool:
+        return bool(self.vapid_private_key and self.vapid_public_key)
+
+    def get_public_key(self) -> str | None:
+        return self.vapid_public_key
     
     def send_notification(
         self,

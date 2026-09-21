@@ -10,6 +10,14 @@ from api.auth.deps import get_company_id
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
+@router.get("/vapid-public-key")
+def get_vapid_public_key():
+    public_key = push_service.get_public_key()
+    if not public_key:
+        raise HTTPException(status_code=503, detail="VAPID public key não configurada")
+    return {"public_key": public_key}
+
+
 class SubscriptionCreate(BaseModel):
     endpoint: str
     keys: dict  # {"p256dh": "...", "auth": "..."}

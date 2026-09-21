@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { getCookie } from "@/lib/cookies";
 
 export function usePushNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
@@ -51,13 +52,18 @@ export function usePushNotifications() {
       let sub = await registration.pushManager.getSubscription();
       
       if (!sub) {
-        // Chave pública VAPID do backend
-        const vapidPublicKey = "BJcZLn4wys-g6n0TH_Q_x5TLmAfp01-sKdRRaqjmBIVpuehfIRoXlY38Fs8N7l-L9v_rebHCzS84e8eaY4bNSRc";
-        
-        // Converter para Uint8Array
-        const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-        
-        // Criar nova subscrição
+        const token = getCookie("access_token") || "";
+        const publicKeyResponse = await fetch("/api/notifications/vapid-public-key", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (!publicKeyResponse.ok) {
+          throw new Error("VAPID public key indisponível no backend");
+        }
+
+        const { public_key } = await publicKeyResponse.json();
+        const convertedVapidKey = urlBase64ToUint8Array(public_key);
+
         sub = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: convertedVapidKey,
@@ -78,10 +84,12 @@ export function usePushNotifications() {
 
   const sendSubscriptionToBackend = async (sub: PushSubscription) => {
     try {
+      const token = getCookie("access_token") || "";
       const response = await fetch("/api/notifications/subscribe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           endpoint: sub.endpoint,
@@ -130,12 +138,12 @@ export function usePushNotifications() {
   const unsubscribe = async () => {
     if (subscription) {
       try {
-        // Notificar backend primeiro
+        const token = getCookie("access_token") || "";
         await fetch(`/api/notifications/unsubscribe?endpoint=${encodeURIComponent(subscription.endpoint)}`, {
           method: "DELETE",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         
-        // Depois cancelar localmente
         await subscription.unsubscribe();
         setSubscription(null);
         toast.success("Notificações desativadas");
@@ -154,11 +162,12 @@ export function usePushNotifications() {
     }
 
     try {
-      // Usar endpoint do backend para enviar notificação de teste
+      const token = getCookie("access_token") || "";
       const response = await fetch("/api/notifications/test", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
 
