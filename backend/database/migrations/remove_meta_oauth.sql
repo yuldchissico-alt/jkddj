@@ -6,3 +6,4 @@
 DROP TABLE IF EXISTS meta_connections;
 
 -- Comentário: Sistema agora usa apenas tokens de acesso manual via facebook_accounts
+SELECT 1; -- Statement vazio para garantir execução sem erro
