@@ -23,7 +23,6 @@ from api.products.crud import router as products_router
 from api.products.items import router as product_items_router
 from api.products.stats import router as product_stats_router
 from api.products.aliases import router as product_aliases_router
-from api.meta.oauth import router as meta_oauth_router
 from api.funnel.data import router as funnel_router
 from api.sales.transactions import router as sales_router
 from api.sales.delete import router as sales_delete_router
@@ -105,7 +104,6 @@ ROUTERS = [
     product_items_router,
     product_stats_router,
     product_aliases_router,
-    meta_oauth_router,
     funnel_router,
     sales_router,
     sales_delete_router,
