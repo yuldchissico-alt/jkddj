@@ -89,7 +89,10 @@ export default function CampaignsPage() {
     await silentReload();
   }, [silentReload]);
 
-  const unidentifiedProducts = unidentified?.products ?? [];
+  const unidentifiedProducts = useMemo(
+    () => unidentified?.products ?? [],
+    [unidentified],
+  );
 
   const allRows = useMemo(() => {
     const rows: CampaignData[] = [...campaigns];

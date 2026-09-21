@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RiImageLine, RiFilmLine } from "@remixicon/react";
 import type { CampaignFormState, AdFormData } from "../hooks/useCampaignForm";
@@ -45,12 +45,10 @@ export function IndividualEditPanel({ form, onUpdateAd }: IndividualEditPanelPro
     onUpdateAd(activeTab, data);
   }, [activeTab, onUpdateAd]);
 
-  const mediaIcon = useMemo(() => {
-    if (!currentAd) return null;
-    return currentAd.media_type === "video"
+  const mediaIcon =
+    currentAd?.media_type === "video"
       ? <RiFilmLine className="size-3.5" />
       : <RiImageLine className="size-3.5" />;
-  }, [currentAd?.media_type]);
 
   if (!currentAd || form.ads.length === 0) return null;
 

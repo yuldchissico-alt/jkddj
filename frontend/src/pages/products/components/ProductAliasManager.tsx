@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, X, Loader2, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,7 @@ export function ProductAliasManager({ productId }: ProductAliasManagerProps) {
   const [error, setError] = useState<string | null>(null);
   const [detectInfo, setDetectInfo] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAliases();
-  }, [productId]);
-
-  const loadAliases = async () => {
+  const loadAliases = useCallback(async () => {
     setLoading(true);
     try {
       const data = await fetchAliases(productId);
@@ -35,7 +31,11 @@ export function ProductAliasManager({ productId }: ProductAliasManagerProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId]);
+
+  useEffect(() => {
+    loadAliases();
+  }, [loadAliases]);
 
   const handleAdd = async () => {
     const trimmed = newAlias.trim();

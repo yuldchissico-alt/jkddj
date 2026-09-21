@@ -27,7 +27,9 @@ export function ValueDisplayProvider({ children }: { children: ReactNode }) {
       const next = !prev;
       try {
         localStorage.setItem(STORAGE_KEY, String(next));
-      } catch {}
+      } catch {
+        // localStorage indisponível (modo privado ou cota excedida) — ignora
+      }
       return next;
     });
   };

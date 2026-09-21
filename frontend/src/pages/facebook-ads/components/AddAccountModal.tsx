@@ -35,6 +35,13 @@ export function AddAccountModal({
     }
   }, [open, prefillToken]);
 
+  const resetFields = useCallback(() => {
+    setBusinessId("");
+    setAccountItems([]);
+    setAccessToken("");
+    setAutoMode(false);
+  }, []);
+
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!accessToken.trim()) return;
@@ -54,14 +61,7 @@ export function AddAccountModal({
     }
 
     resetFields();
-  }, [accessToken, accountItems, businessId, onAdd, onBulkAdd]);
-
-  const resetFields = () => {
-    setBusinessId("");
-    setAccountItems([]);
-    setAccessToken("");
-    setAutoMode(false);
-  };
+  }, [accessToken, accountItems, businessId, onAdd, onBulkAdd, resetFields]);
 
   const handleClose = (v: boolean) => {
     if (!v) resetFields();

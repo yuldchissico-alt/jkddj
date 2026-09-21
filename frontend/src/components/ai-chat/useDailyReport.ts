@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { geminiDailyReport } from "@/services/integrations";
 import { getReportIntervalMs } from "./ReportIntervalSettings";
 
@@ -28,6 +28,32 @@ export function useDailyReport(isConfigured: boolean) {
   });
   const hasTriggered = useRef(false);
 
+  const generateReport = useCallback(async () => {
+    setState((prev) => ({ ...prev, isLoading: true }));
+
+    try {
+      const result = await geminiDailyReport();
+
+      // Verificar se atingiu o gasto mínimo
+      if (result.spend_today < MIN_SPEND) {
+        setState({ report: null, isLoading: false, shouldAutoOpen: false });
+        return;
+      }
+
+      // Salvar cache e timestamp
+      localStorage.setItem(REPORT_TIMESTAMP_KEY, String(Date.now()));
+      localStorage.setItem(REPORT_CACHE_KEY, result.response);
+
+      setState({
+        report: result.response,
+        isLoading: false,
+        shouldAutoOpen: true,
+      });
+    } catch {
+      setState({ report: null, isLoading: false, shouldAutoOpen: false });
+    }
+  }, []);
+
   useEffect(() => {
     if (!isConfigured || hasTriggered.current) return;
 
@@ -52,33 +78,7 @@ export function useDailyReport(isConfigured: boolean) {
 
     hasTriggered.current = true;
     generateReport();
-  }, [isConfigured]);
-
-  const generateReport = async () => {
-    setState((prev) => ({ ...prev, isLoading: true }));
-
-    try {
-      const result = await geminiDailyReport();
-
-      // Verificar se atingiu o gasto mínimo
-      if (result.spend_today < MIN_SPEND) {
-        setState({ report: null, isLoading: false, shouldAutoOpen: false });
-        return;
-      }
-
-      // Salvar cache e timestamp
-      localStorage.setItem(REPORT_TIMESTAMP_KEY, String(Date.now()));
-      localStorage.setItem(REPORT_CACHE_KEY, result.response);
-
-      setState({
-        report: result.response,
-        isLoading: false,
-        shouldAutoOpen: true,
-      });
-    } catch {
-      setState({ report: null, isLoading: false, shouldAutoOpen: false });
-    }
-  };
+  }, [isConfigured, generateReport]);
 
   const clearAutoOpen = () => {
     setState((prev) => ({ ...prev, shouldAutoOpen: false }));

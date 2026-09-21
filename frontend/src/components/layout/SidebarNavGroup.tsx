@@ -13,14 +13,12 @@ interface NavItem {
 }
 
 interface SidebarNavGroupProps {
-  label: string;
   items: NavItem[];
   currentPath: string;
   onNavigate: (url: string) => void;
 }
 
 export function SidebarNavGroup({
-  label: _label,
   items,
   currentPath,
   onNavigate,

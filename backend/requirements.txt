@@ -11,6 +11,7 @@ httpx
 openpyxl
 python-multipart
 langchain
-langchain-google-genai
+langchain-openai
 stripe
 pywebpush
+tzdata

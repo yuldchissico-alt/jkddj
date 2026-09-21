@@ -115,7 +115,6 @@ export function AppSidebar() {
         {visibleGroups.map((group) => (
           <SidebarNavGroup
             key={group.label}
-            label={group.label}
             items={group.items}
             currentPath={location.pathname}
             onNavigate={(url: string) => navigate(url)}

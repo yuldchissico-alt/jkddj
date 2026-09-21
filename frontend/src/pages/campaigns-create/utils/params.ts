@@ -22,7 +22,7 @@ export function sanitizeExtraParams(raw: string): string {
   if (!raw) return "";
 
   // Strip leading ? and &
-  let cleaned = raw.replace(/^[?&]+/, "").replace(/[&]+$/, "");
+  const cleaned = raw.replace(/^[?&]+/, "").replace(/[&]+$/, "");
 
   // Split em pares e filtrar
   const pairs = cleaned
