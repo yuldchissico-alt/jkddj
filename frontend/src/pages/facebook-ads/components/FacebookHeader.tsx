@@ -92,10 +92,6 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
           {metaAccount ? ` · ${metaAccount}` : ""}
         </div>
         <FacebookAdsGuide />
-        <Button onClick={connectMeta} className="gap-1.5 h-9" variant={metaStatus === "connected" ? "secondary" : "default"}>
-          {metaStatus === "connected" ? <RiRefreshLine className="size-4" /> : <RiLink className="size-4" />}
-          {metaStatus === "connected" ? "Adicionar perfil" : "Adicionar perfil"}
-        </Button>
         {metaStatus === "connected" && (
           <Button onClick={disconnectMeta} variant="outline" className="gap-1.5 h-9 text-destructive border-destructive/30">
             <RiCloseCircleLine className="size-4" />
