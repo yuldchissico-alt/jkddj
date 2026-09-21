@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 
-from api.meta.oauth import meta_oauth_callback
+from api.meta.oauth import choose_primary_ad_account, meta_oauth_callback
 
 
 class DummyQuery:
@@ -56,3 +56,23 @@ def test_meta_oauth_callback_handles_profile_fetch_error():
 
         assert response.status_code == 302
         assert "meta_status=error" in response.headers["location"]
+
+
+def test_choose_primary_ad_account_uses_account_id_from_adaccounts():
+    profile = {"id": "user-123", "name": "Jane"}
+    adaccounts = [
+        {"id": "ad-1", "account_id": "act_987654321", "name": "Primary"},
+        {"id": "ad-2", "account_id": "act_222222222", "name": "Secondary"},
+    ]
+
+    assert choose_primary_ad_account(profile, adaccounts) == "act_987654321"
+
+
+def test_choose_primary_ad_account_handles_missing_account_id_field():
+    profile = {"id": "user-123", "name": "Jane"}
+    adaccounts = [
+        {"id": "act_555555555", "name": "Primary"},
+        {"id": "act_777777777", "name": "Secondary"},
+    ]
+
+    assert choose_primary_ad_account(profile, adaccounts) == "act_555555555"

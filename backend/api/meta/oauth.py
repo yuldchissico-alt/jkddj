@@ -47,6 +47,24 @@ class MetaOAuthCallbackRequest(BaseModel):
     error_description: str | None = None
 
 
+def choose_primary_ad_account(profile: dict | None, adaccounts: list[dict] | None) -> str | None:
+    for account in adaccounts or []:
+        if not isinstance(account, dict):
+            continue
+        account_id = account.get("account_id") or account.get("id")
+        if account_id:
+            return str(account_id)
+
+    if profile is None:
+        return None
+
+    account_id = profile.get("account_id") or profile.get("id")
+    if account_id:
+        return str(account_id)
+
+    return None
+
+
 @router.get("/connect", response_model=MetaOAuthConnectResponse)
 def connect_meta(db: Session = Depends(get_db), current_user: Admin = Depends(get_current_user)):
     if not META_APP_ID:
@@ -151,9 +169,18 @@ async def meta_oauth_callback(request: Request, db: Session = Depends(get_db)):
         logger.exception("Erro inesperado ao buscar perfil da Meta no callback")
         return redirect_error(str(exc))
 
-    account_id = profile.get("id")
+    try:
+        adaccounts = await _fetch_meta_adaccounts(access_token)
+    except HTTPException as exc:
+        logger.exception("Erro ao buscar contas da Meta no callback")
+        return redirect_error(str(exc.detail) if hasattr(exc, "detail") else str(exc))
+    except Exception as exc:
+        logger.exception("Erro inesperado ao buscar contas da Meta no callback")
+        return redirect_error(str(exc))
+
+    account_id = choose_primary_ad_account(profile, adaccounts)
     if not account_id:
-        return redirect_error("Meta não retornou o perfil do usuário autenticado")
+        return redirect_error("Meta não retornou nenhuma conta de anúncio acessível")
 
     connection = db.query(MetaConnection).filter(
         MetaConnection.company_id == company_id,

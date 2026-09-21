@@ -1,9 +1,9 @@
 """
-Serviço principal do agente AI usando LangChain + Gemini.
+Serviço principal do agente AI usando LangChain + OpenRouter.
 Usa bind_tools para a tool universal e executa manualmente.
 Suporta page_context para usar dados pré-carregados da página.
 """
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from ai.prompt import SYSTEM_PROMPT, PAGE_CONTEXT_INSTRUCTION
@@ -69,24 +69,26 @@ def _build_user_instructions_block(ai_instructions: dict | None) -> str:
     return block
 
 
-def build_llm(api_key: str, model: str = "gemini-2.0-flash-lite"):
-    """Cria LLM com a tool universal vinculada."""
-    llm = ChatGoogleGenerativeAI(
+def build_llm(api_key: str, model: str = "inclusionai/ling-3.0-flash-vl:free"):
+    """Cria LLM com a tool universal vinculada usando OpenRouter."""
+    llm = ChatOpenAI(
         model=model,
-        google_api_key=api_key,
+        api_key=api_key,
+        base_url="https://openrouter.ai/api/v1",
         temperature=0.3,
-        convert_system_message_to_human=True,
+        default_headers={"HTTP-Referer": "https://logpose.app", "X-Title": "LogPose"},
     )
     return llm.bind_tools(ALL_TOOLS)
 
 
-def build_llm_no_tools(api_key: str, model: str = "gemini-2.0-flash-lite"):
+def build_llm_no_tools(api_key: str, model: str = "inclusionai/ling-3.0-flash-vl:free"):
     """Cria LLM sem tools (para quando já temos dados da página)."""
-    return ChatGoogleGenerativeAI(
+    return ChatOpenAI(
         model=model,
-        google_api_key=api_key,
+        api_key=api_key,
+        base_url="https://openrouter.ai/api/v1",
         temperature=0.3,
-        convert_system_message_to_human=True,
+        default_headers={"HTTP-Referer": "https://logpose.app", "X-Title": "LogPose"},
     )
 
 

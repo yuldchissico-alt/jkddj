@@ -15,12 +15,13 @@ from integrations.meta_ads.schemas import AccountInsightsSummary, CampaignInsigh
 logger = logging.getLogger(__name__)
 
 
-def get_fb_account(db: Session, company_id: Optional[int] = None) -> Optional[FacebookAccount]:
-    """Retorna a conta FB válida do company atual, priorizando a mais recente."""
-    query = db.query(FacebookAccount).filter(FacebookAccount.token_valid.is_(True))
-    if company_id is not None:
-        query = query.filter(FacebookAccount.company_id == company_id)
-    return query.order_by(FacebookAccount.id.desc()).first()
+def get_fb_account(db: Session) -> Optional[FacebookAccount]:
+    """Retorna a primeira conta FB com token válido."""
+    return (
+        db.query(FacebookAccount)
+        .filter(FacebookAccount.token_valid.is_(True))
+        .first()
+    )
 
 
 def _mark_token_invalid(db: Session, account: FacebookAccount) -> None:
@@ -37,21 +38,17 @@ async def fetch_meta_account_summary(
     db: Session,
     date_start: str,
     date_end: str,
-    company_id: Optional[int] = None,
 ) -> tuple[Optional[AccountInsightsSummary], Optional[str]]:
     """
     Busca métricas agregadas da conta Meta Ads.
     Retorna (summary, error_message).
     """
-    fb = get_fb_account(db, company_id=company_id)
+    fb = get_fb_account(db)
     if not fb:
         # Verifica se existe conta mas token inválido
         has_invalid = db.query(FacebookAccount).filter(
             FacebookAccount.token_valid.is_(False)
-        )
-        if company_id is not None:
-            has_invalid = has_invalid.filter(FacebookAccount.company_id == company_id)
-        has_invalid = has_invalid.first()
+        ).first()
         if has_invalid:
             return None, "token_invalid"
         return None, None
@@ -74,10 +71,9 @@ async def fetch_meta_campaigns_for_dashboard(
     db: Session,
     date_start: str,
     date_end: str,
-    company_id: Optional[int] = None,
 ) -> list[CampaignInsights]:
     """Busca campanhas da Meta Ads para top campaigns do dashboard."""
-    fb = get_fb_account(db, company_id=company_id)
+    fb = get_fb_account(db)
     if not fb:
         return []
 

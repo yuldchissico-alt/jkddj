@@ -13,7 +13,7 @@ router = APIRouter(prefix="/gemini", tags=["gemini"])
 class GeminiAccountCreate(BaseModel):
     name: str
     api_key: str
-    model: str = "gemini-2.0-flash-lite"
+    model: str = "inclusionai/ling-3.0-flash-vl:free"
 
 
 class GeminiAccountUpdate(BaseModel):
