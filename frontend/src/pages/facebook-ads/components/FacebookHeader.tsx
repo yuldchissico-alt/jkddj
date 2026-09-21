@@ -19,29 +19,10 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
   const [metaStatus, setMetaStatus] = useState<string>("not_connected");
   const [metaAccount, setMetaAccount] = useState<string | null>(null);
 
+  // Meta OAuth removido - apenas tokens manuais
   useEffect(() => {
-    const loadStatus = async () => {
-      try {
-        const token = document.cookie.split("access_token=")[1]?.split(";")[0] || "";
-        const response = await fetch("/api/meta/status", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json();
-        setMetaStatus(data.status || "not_connected");
-        setMetaAccount(data.account_name || null);
-      } catch {
-        setMetaStatus("not_connected");
-      }
-    };
-
-    const params = new URLSearchParams(window.location.search);
-    const metaStatusParam = params.get("meta_status");
-
-    loadStatus();
-
-    if (metaStatusParam) {
-      window.history.replaceState({}, "", window.location.pathname);
-    }
+    setMetaStatus("not_connected");
+    setMetaAccount(null);
   }, []);
 
   const connectMeta = async () => {

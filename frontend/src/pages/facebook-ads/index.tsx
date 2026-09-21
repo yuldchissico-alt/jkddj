@@ -85,19 +85,11 @@ export default function FacebookAdsPage() {
       return;
     }
 
+    // Meta OAuth removido
     const checkMetaStatus = async () => {
-      try {
-        const token = getCookie("access_token") || "";
-        const response = await fetch("/api/meta/status", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json();
-        setMetaConnected(Boolean(data.connected));
-        setMetaProfileName(data.account_name || null);
-        if (data.connected) await loadMetaAccounts();
-      } catch {
-        setMetaConnected(false);
-      }
+      setMetaConnected(false);
+      setMetaProfileName(null);
+      await loadMetaAccounts();
     };
     void checkMetaStatus();
   }, []);
