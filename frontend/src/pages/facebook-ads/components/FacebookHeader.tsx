@@ -1,4 +1,4 @@
-import { RiMetaLine, RiAddCircleLine, RiLink, RiRefreshLine, RiCloseCircleLine } from "@remixicon/react";
+import { RiMetaLine, RiAddCircleLine, RiCloseCircleLine } from "@remixicon/react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { FacebookAdsGuide } from "./FacebookAdsGuide";
@@ -24,22 +24,6 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
     setMetaStatus("not_connected");
     setMetaAccount(null);
   }, []);
-
-  const connectMeta = async () => {
-    setMetaStatus("connecting");
-    try {
-      const token = document.cookie.split("access_token=")[1]?.split(";")[0] || "";
-      const response = await fetch("/api/meta/connect", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-      if (data.auth_url) {
-        window.location.href = data.auth_url;
-      }
-    } catch {
-      setMetaStatus("error");
-    }
-  };
 
   const disconnectMeta = async () => {
     setMetaStatus("not_connected");
