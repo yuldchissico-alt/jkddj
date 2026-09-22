@@ -44,6 +44,7 @@ from api.csv_import.preview import router as import_preview_router
 from api.csv_import.execute import router as import_execute_router
 from api.gemini.accounts import router as gemini_accounts_router
 from api.gemini.models import router as gemini_models_router
+from api.gemini.status import router as gemini_status_router
 from api.gemini.chat import router as gemini_chat_router
 from api.gemini.daily_report import router as gemini_daily_report_router
 from api.ai.training_level import router as ai_training_router
@@ -125,6 +126,7 @@ ROUTERS = [
     import_execute_router,
     gemini_accounts_router,
     gemini_models_router,
+    gemini_status_router,
     gemini_chat_router,
     gemini_daily_report_router,
     ai_training_router,
