@@ -5,13 +5,14 @@ psycopg2-binary
 python-jose[cryptography]
 bcrypt
 python-dotenv
-pydantic[email]
+pydantic[email]>=2.0
 alembic
 httpx
 openpyxl
 python-multipart
-langchain
-langchain-openai
+langchain>=0.3.0
+langchain-openai>=0.2.0
+langchain-core>=0.3.0
 stripe
 pywebpush
 tzdata
