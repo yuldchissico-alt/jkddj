@@ -63,6 +63,7 @@ from api.advanced_settings.reset_sales import router as reset_sales_router
 from api.notifications.subscriptions import router as notifications_router
 from api.superadmin.companies import router as superadmin_router
 from api.utm.tracking import router as utm_tracking_router
+from api.debug.database_status import router as debug_router
 
 from database.core.migrate_sql import run_sql_migrations
 
@@ -145,6 +146,7 @@ ROUTERS = [
     notifications_router,
     superadmin_router,
     utm_tracking_router,
+    debug_router,
 ]
 
 for router in ROUTERS:
