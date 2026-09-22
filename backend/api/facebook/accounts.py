@@ -75,6 +75,8 @@ async def create_account(
         access_token=payload.access_token,
         business_id=payload.business_id,
         token_valid=True,
+        status="discovered",
+        is_active=False,
     )
     db.add(account)
     db.commit()
@@ -117,6 +119,8 @@ async def create_accounts_bulk(
             access_token=payload.access_token,
             business_id=payload.business_id,
             token_valid=True,
+            status="discovered",
+            is_active=False,
         )
         db.add(account)
         db.flush()
