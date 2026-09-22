@@ -1,6 +1,7 @@
 -- Migration: Add token_valid column to facebook_accounts table
 -- Date: 2026-09-22
 -- Description: Adds token_valid column to track if Facebook tokens are still valid
+-- This column is required by meta_data.py, meta_spend.py, and daily_report_data.py
 
 -- Add token_valid column if it doesn't exist
 DO $$ 
