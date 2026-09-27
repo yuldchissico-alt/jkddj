@@ -1,6 +1,6 @@
 import { RiMetaLine, RiAddCircleLine, RiCloseCircleLine } from "@remixicon/react";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FacebookAdsGuide } from "./FacebookAdsGuide";
 
 interface FacebookHeaderProps {
@@ -17,13 +17,7 @@ const META_STATUS_LABELS = {
 
 export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
   const [metaStatus, setMetaStatus] = useState<string>("not_connected");
-  const [metaAccount, setMetaAccount] = useState<string | null>(null);
-
-  // Meta OAuth removido - apenas tokens manuais
-  useEffect(() => {
-    setMetaStatus("not_connected");
-    setMetaAccount(null);
-  }, []);
+  const [metaAccount] = useState<string | null>(null);
 
   const disconnectMeta = async () => {
     setMetaStatus("not_connected");

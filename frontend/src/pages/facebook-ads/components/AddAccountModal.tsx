@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -29,11 +29,13 @@ export function AddAccountModal({
 
   const isDuplicate = !!prefillToken;
 
-  useEffect(() => {
+  const [prevPrefillToken, setPrevPrefillToken] = useState(prefillToken);
+  if (prefillToken !== prevPrefillToken) {
+    setPrevPrefillToken(prefillToken);
     if (open && prefillToken) {
       setAccessToken(prefillToken);
     }
-  }, [open, prefillToken]);
+  }
 
   const resetFields = useCallback(() => {
     setBusinessId("");

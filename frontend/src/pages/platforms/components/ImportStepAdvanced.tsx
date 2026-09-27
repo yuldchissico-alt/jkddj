@@ -32,14 +32,29 @@ import { convertAndFormatMZN } from "@/utils/format";
 export function ImportStepAdvanced({ preview, onExecute, onBack, isLoading, error }: Props) {
   const sep = "|";
   const [existingProducts, setExistingProducts] = useState<ProductAPI[]>([]);
-  const [groups, setGroups] = useState<SmartGroupConfig[]>([]);
+  const [groups, setGroups] = useState<SmartGroupConfig[]>(() => {
+    const groupMap = new Map<string, string[]>();
+    preview.products.forEach((p) => {
+      const key = extractGroupName(p.name, sep);
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key)!.push(p.name);
+    });
+    return Array.from(groupMap.entries()).map(([groupName, originalNames]) => ({
+      groupName,
+      originalNames,
+      type: "frontend",
+      parentGroups: [],
+      product_id: null,
+    }));
+  });
 
   useEffect(() => {
     fetchProducts().then(setExistingProducts).catch(() => {});
   }, []);
 
-  // Reagrupar sempre que o separador muda
-  useEffect(() => {
+  const [prevProducts, setPrevProducts] = useState(preview.products);
+  if (preview.products !== prevProducts) {
+    setPrevProducts(preview.products);
     const groupMap = new Map<string, string[]>();
     preview.products.forEach((p) => {
       const key = extractGroupName(p.name, sep);
@@ -47,8 +62,8 @@ export function ImportStepAdvanced({ preview, onExecute, onBack, isLoading, erro
       groupMap.get(key)!.push(p.name);
     });
 
-    setGroups((prev) => {
-      return Array.from(groupMap.entries()).map(([groupName, originalNames]) => {
+    setGroups((prev) =>
+      Array.from(groupMap.entries()).map(([groupName, originalNames]) => {
         const existing = prev.find((g) => g.groupName === groupName);
         return {
           groupName,
@@ -57,9 +72,9 @@ export function ImportStepAdvanced({ preview, onExecute, onBack, isLoading, erro
           parentGroups: existing?.parentGroups ?? [],
           product_id: existing?.product_id ?? null,
         };
-      });
-    });
-  }, [preview.products]);
+      })
+    );
+  }
 
   // Todos os nomes de grupos são candidatos a pai (independente do tipo atual)
   const allGroupNames = useMemo(

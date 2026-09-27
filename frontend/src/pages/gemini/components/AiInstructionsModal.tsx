@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -30,9 +30,13 @@ export function AiInstructionsModal({
   const [draft, setDraft] = useState<AiInstructions>(instructions);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [prevInstructions, setPrevInstructions] = useState(instructions);
+  if (open !== prevOpen || instructions !== prevInstructions) {
+    setPrevOpen(open);
+    setPrevInstructions(instructions);
     if (open) setDraft(instructions);
-  }, [open, instructions]);
+  }
 
   const toggleMetric = (key: keyof AiMetricsConfig, enabled: boolean) => {
     setDraft((prev) => ({
