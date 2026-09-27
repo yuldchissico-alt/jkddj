@@ -10,6 +10,19 @@ export function usePushNotifications() {
     if ("Notification" in window) {
       setPermission(Notification.permission);
     }
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready
+        .then((registration) => registration.pushManager.getSubscription())
+        .then((sub) => {
+          if (sub) {
+            setSubscription(sub);
+          }
+        })
+        .catch((err) => {
+          console.warn("Não foi possível verificar subscrição push:", err);
+        });
+    }
   }, []);
 
   const requestPermission = async () => {
@@ -28,9 +41,14 @@ export function usePushNotifications() {
       setPermission(result);
 
       if (result === "granted") {
-        await subscribeUser();
-        toast.success("Notificações ativadas com sucesso!");
-        return true;
+        const sub = await subscribeUser();
+        if (sub) {
+          toast.success("Notificações ativadas com sucesso!");
+          return true;
+        } else {
+          toast.error("Permissão concedida, mas falha ao registrar dispositivo.");
+          return false;
+        }
       } else if (result === "denied") {
         toast.error("Permissão para notificações negada");
         return false;
@@ -48,22 +66,34 @@ export function usePushNotifications() {
     try {
       const registration = await navigator.serviceWorker.ready;
       
+      const token = getCookie("access_token") || "";
+      const publicKeyResponse = await fetch("/api/notifications/vapid-public-key", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!publicKeyResponse.ok) {
+        throw new Error("VAPID public key indisponível no backend");
+      }
+
+      const { public_key } = await publicKeyResponse.json();
+      const convertedVapidKey = urlBase64ToUint8Array(public_key);
+
       // Verificar se já existe uma subscrição
       let sub = await registration.pushManager.getSubscription();
       
-      if (!sub) {
-        const token = getCookie("access_token") || "";
-        const publicKeyResponse = await fetch("/api/notifications/vapid-public-key", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-
-        if (!publicKeyResponse.ok) {
-          throw new Error("VAPID public key indisponível no backend");
+      if (sub) {
+        try {
+          await sendSubscriptionToBackend(sub);
+          setSubscription(sub);
+          return sub;
+        } catch {
+          // Se a subscrição antiga falhou (ex: chave VAPID diferente), desinscrever para renovar
+          await sub.unsubscribe().catch(() => {});
+          sub = null;
         }
+      }
 
-        const { public_key } = await publicKeyResponse.json();
-        const convertedVapidKey = urlBase64ToUint8Array(public_key);
-
+      if (!sub) {
         sub = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: convertedVapidKey,
@@ -83,28 +113,24 @@ export function usePushNotifications() {
   };
 
   const sendSubscriptionToBackend = async (sub: PushSubscription) => {
-    try {
-      const token = getCookie("access_token") || "";
-      const response = await fetch("/api/notifications/subscribe", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    const token = getCookie("access_token") || "";
+    const response = await fetch("/api/notifications/subscribe", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: arrayBufferToBase64(sub.getKey("p256dh")),
+          auth: arrayBufferToBase64(sub.getKey("auth")),
         },
-        body: JSON.stringify({
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: arrayBufferToBase64(sub.getKey("p256dh")),
-            auth: arrayBufferToBase64(sub.getKey("auth")),
-          },
-        }),
-      });
+      }),
+    });
 
-      if (!response.ok) {
-        throw new Error("Erro ao enviar subscrição ao servidor");
-      }
-    } catch (error) {
-      console.error("Erro ao enviar subscrição:", error);
+    if (!response.ok) {
+      throw new Error("Erro ao enviar subscrição ao servidor");
     }
   };
 
@@ -157,8 +183,8 @@ export function usePushNotifications() {
   // Simular notificação de venda (para teste)
   const testNotification = async () => {
     if (permission !== "granted") {
-      await requestPermission();
-      return;
+      const granted = await requestPermission();
+      if (!granted) return;
     }
 
     try {
@@ -171,10 +197,12 @@ export function usePushNotifications() {
         },
       });
 
+      const data = await response.json().catch(() => ({}));
+
       if (response.ok) {
-        toast.success("Notificação de teste enviada!");
+        toast.success(data.message || "Notificação de teste enviada!");
       } else {
-        toast.error("Erro ao enviar notificação de teste");
+        toast.error(data.detail || "Erro ao enviar notificação de teste");
       }
     } catch (error) {
       console.error("Erro ao enviar notificação de teste:", error);

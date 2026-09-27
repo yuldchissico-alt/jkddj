@@ -1,18 +1,24 @@
 import os
 import json
 from typing import Optional
+from dotenv import load_dotenv
 from pywebpush import webpush, WebPushException
 from sqlalchemy.orm import Session
 from database.models.push_subscription import PushSubscription
 from datetime import datetime
+
+load_dotenv()
+
+DEFAULT_VAPID_PUBLIC_KEY = "BLKKz-BFH1yCyqu51QQuVDr1_NwE1CItzo39jzyQHUACNwHL8JrTse-pDddbwOu4sYwQsqAsnGyWgxAvRPO_m7s"
+DEFAULT_VAPID_PRIVATE_KEY = "7yFmL2idAI5yrb0dE9jRwA4HcpDZc-uwrhDKpBeZl3o"
 
 
 class PushNotificationService:
     """Serviço para enviar notificações push usando Web Push Protocol"""
     
     def __init__(self):
-        self.vapid_private_key = os.getenv("VAPID_PRIVATE_KEY")
-        self.vapid_public_key = os.getenv("VAPID_PUBLIC_KEY")
+        self.vapid_private_key = os.getenv("VAPID_PRIVATE_KEY") or DEFAULT_VAPID_PRIVATE_KEY
+        self.vapid_public_key = os.getenv("VAPID_PUBLIC_KEY") or DEFAULT_VAPID_PUBLIC_KEY
         self.vapid_claims = {
             "sub": f"mailto:{os.getenv('VAPID_CLAIM_EMAIL', 'admin@lomustrack.app')}"
         }
