@@ -9,6 +9,10 @@ import {
   RiGroupLine,
   RiBox3Line,
   RiFilter2Line,
+  RiWalletLine,
+  RiMetaLine,
+  RiSettings3Line,
+  RiUserLine,
 } from "@remixicon/react";
 import { MoreDropdown } from "./MobileMoreDropdown";
 
@@ -21,10 +25,13 @@ const NAV_ITEMS = [
 ];
 
 export const MORE_ITEMS = [
-  { label: "Vendas", icon: RiShoppingCartLine, path: "/sales" },
   { label: "Clientes", icon: RiGroupLine, path: "/customers" },
   { label: "Produtos", icon: RiBox3Line, path: "/products" },
   { label: "Funil", icon: RiFilter2Line, path: "/funnel" },
+  { label: "Plataformas", icon: RiWalletLine, path: "/platforms" },
+  { label: "Facebook Ads", icon: RiMetaLine, path: "/facebook-ads" },
+  { label: "Configurações", icon: RiSettings3Line, path: "/advanced-settings" },
+  { label: "Meu Perfil", icon: RiUserLine, path: "/profile" },
 ];
 
 const MORE_PATHS = MORE_ITEMS.map((item) => item.path);

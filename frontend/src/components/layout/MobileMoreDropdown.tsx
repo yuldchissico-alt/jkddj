@@ -32,7 +32,7 @@ export function MoreDropdown({
           : "opacity-0 scale-95 translate-y-2 pointer-events-none"
       }`}
     >
-      <div className="rounded-2xl bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl p-2 min-w-[180px]">
+      <div className="rounded-2xl bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl p-2 min-w-[200px] max-h-[75vh] overflow-y-auto">
         {items.map((item) => {
           const isActive = currentPath.startsWith(item.path);
           const Icon = item.icon;
