@@ -81,9 +81,8 @@ class PushNotificationService:
             
         except WebPushException as e:
             print(f"❌ Erro ao enviar push notification: {e}")
-            if e.response and e.response.status_code in [404, 410]:
-                # Subscrição expirada ou inválida
-                return False
+            if e.response is not None and e.response.status_code in [404, 410]:
+                subscription.is_active = False
             return False
         except Exception as e:
             print(f"❌ Erro inesperado ao enviar notificação: {e}")

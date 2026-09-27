@@ -82,12 +82,17 @@ export function usePushNotifications() {
       let sub = await registration.pushManager.getSubscription();
       
       if (sub) {
-        try {
-          await sendSubscriptionToBackend(sub);
-          setSubscription(sub);
-          return sub;
-        } catch {
-          // Se a subscrição antiga falhou (ex: chave VAPID diferente), desinscrever para renovar
+        // Verificar se a subscrição existente no navegador usava a mesma chave VAPID
+        let isMatchingVapid = false;
+        if (sub.options && sub.options.applicationServerKey) {
+          const currentKeyBytes = new Uint8Array(sub.options.applicationServerKey);
+          isMatchingVapid =
+            currentKeyBytes.length === convertedVapidKey.length &&
+            currentKeyBytes.every((val, i) => val === convertedVapidKey[i]);
+        }
+
+        if (!isMatchingVapid) {
+          console.warn("Subscrição existente usa chave VAPID antiga ou incompatível. Renovando...");
           await sub.unsubscribe().catch(() => {});
           sub = null;
         }

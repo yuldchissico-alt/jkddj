@@ -50,11 +50,13 @@ def subscribe_to_push(
     ).first()
     
     if existing:
-        # Reativar se estava inativa
-        if not existing.is_active:
-            existing.is_active = True
-            db.commit()
-            db.refresh(existing)
+        # Atualizar chaves caso tenham sido renovadas e reativar
+        existing.p256dh = subscription.keys.get("p256dh", existing.p256dh)
+        existing.auth = subscription.keys.get("auth", existing.auth)
+        existing.user_agent = request.headers.get("user-agent", existing.user_agent)
+        existing.is_active = True
+        db.commit()
+        db.refresh(existing)
         return existing
     
     # Criar nova subscrição
@@ -125,8 +127,6 @@ def send_test_notification(
         
         if success:
             success_count += 1
-        else:
-            sub.is_active = False
     
     db.commit()
     
