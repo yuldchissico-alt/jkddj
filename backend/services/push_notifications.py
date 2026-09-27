@@ -132,7 +132,7 @@ class PushNotificationService:
         for sub in subscriptions:
             success = self.send_notification(
                 subscription=sub,
-                title="LomusTrack 🎉",
+                title="LomusTrack",
                 body=body,
                 data={
                     "url": "/sales",

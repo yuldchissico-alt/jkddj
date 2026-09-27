@@ -76,7 +76,7 @@ self.addEventListener('fetch', (event) => {
 
 // Push notifications: receber notificação de venda
 self.addEventListener('push', (event) => {
-  let title = 'Nexuscale 🎉';
+  let title = 'LomusTrack';
   let options = {
     body: 'Nova venda realizada!',
     icon: '/icons/pwa-192.png',

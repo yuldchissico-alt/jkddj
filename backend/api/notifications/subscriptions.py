@@ -120,7 +120,7 @@ def send_test_notification(
     for sub in subscriptions:
         success = push_service.send_notification(
             subscription=sub,
-            title="LomusTrack 🎉",
+            title="LomusTrack",
             body="Venda Aprovada!\nValor: 1.656 MT",
             data={"url": "/sales", "amount": "1.656 MT"}
         )
