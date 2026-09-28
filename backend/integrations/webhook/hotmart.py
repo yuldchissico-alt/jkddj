@@ -73,10 +73,11 @@ def parse_hotmart_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebho
                     return 0.0
             return 0.0
 
+        price_info = purchase.get("price") or purchase.get("full_price") or {}
+
         # Preço e Valor
         if is_v2:
             # Em Webhook 2.0, price.value já vem em Reais (ex: 197.00)
-            price_info = purchase.get("price") or purchase.get("full_price") or {}
             raw_amount = price_info.get("value") if isinstance(price_info, dict) else purchase.get("price")
             if raw_amount is None:
                 raw_amount = payload.get("amount", 0)
@@ -140,6 +141,18 @@ def parse_hotmart_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebho
             or ""
         )
 
+        # Moeda (USD, BRL, EUR, etc.)
+        price_dict = price_info if isinstance(price_info, dict) else {}
+        full_price_dict = purchase.get("full_price", {}) if isinstance(purchase, dict) and isinstance(purchase.get("full_price"), dict) else {}
+        currency = (
+            price_dict.get("currency_value")
+            or full_price_dict.get("currency_value")
+            or purchase.get("currency_value")
+            or purchase.get("currency")
+            or payload.get("currency")
+            or "BRL"
+        )
+
         checkout_url = (
             checkout.get("url")
             or payload.get("checkout_url")
@@ -151,6 +164,7 @@ def parse_hotmart_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebho
             platform=PaymentPlatform.HOTMART,
             status=status,
             amount=float(amount),
+            currency=str(currency),
             original_status=str(raw_status),
             payment_method=payment_method,
             payment_status=str(payload.get("payment_status") or raw_status or ""),

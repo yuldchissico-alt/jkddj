@@ -6,6 +6,9 @@ export interface SaleAPI {
   platform: "kiwify" | "payt" | "hotmart";
   status: "approved" | "refunded" | "chargeback" | "pending" | "trial";
   amount: number;
+  amount_mzn?: number | null;
+  original_currency?: string | null;
+  original_amount?: number | null;
   customer_email: string | null;
   product_name: string | null;
   product_id: number | null;

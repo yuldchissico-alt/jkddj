@@ -11,6 +11,9 @@ class StandardizedWebhookEvent(BaseModel):
     platform: PaymentPlatform
     status: TransactionStatus
     amount: float
+    currency: str = "BRL"
+    original_amount: Optional[float] = None
+    amount_mzn: Optional[float] = None
     
     original_status: Optional[str] = None
     payment_method: Optional[str] = None

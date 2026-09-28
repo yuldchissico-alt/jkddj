@@ -38,6 +38,9 @@ class Transaction(Base):
         default=TransactionStatus.APPROVED,
     )
     amount = Column(Float, nullable=False)
+    original_currency = Column(String(10), default="BRL", nullable=True)
+    original_amount = Column(Float, nullable=True)
+    amount_mzn = Column(Float, nullable=True)
 
     # FK para customer e product
     customer_id = Column(

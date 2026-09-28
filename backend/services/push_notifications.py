@@ -94,22 +94,25 @@ class PushNotificationService:
         amount: float,
         product_name: str = "Produto",
         customer_name: Optional[str] = None,
-        company_id: int = 1
+        company_id: int = 1,
+        amount_mzn: Optional[float] = None,
     ):
         """
         Envia notificação de venda para todas as subscrições ativas.
         
         Args:
             db: Sessão do banco de dados
-            amount: Valor da venda em BRL
+            amount: Valor da venda normalizado (BRL base)
             product_name: Nome do produto vendido
             customer_name: Nome do cliente (opcional)
             company_id: ID da empresa (multi-tenant)
+            amount_mzn: Valor exato em Metical (se None, converte amount * 13)
         """
-        # Converter BRL para MZN (1 BRL = 13 MZN)
-        amount_mzn = amount * 13
+        # Se não foi fornecido amount_mzn direto, converte amount * 13
+        if amount_mzn is None:
+            amount_mzn = amount * 13
         
-        # Formatar valor
+        # Formatar valor em Metical (ex: 3.200 MT)
         formatted_amount = f"{amount_mzn:,.0f}".replace(",", ".") + " MT"
         
         # Construir mensagem (sem nome do cliente)

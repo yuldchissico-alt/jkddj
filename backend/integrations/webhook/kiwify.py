@@ -77,11 +77,19 @@ def parse_kiwify_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebhoo
         product_price_cents = commissions.get("product_base_price", 0)
         product_price = float(product_price_cents) / 100.0 if product_price_cents else 0.0
 
+        currency = (
+            commissions.get("currency")
+            or payload.get("currency")
+            or payload.get("Order", {}).get("currency")
+            or "BRL"
+        )
+
         return StandardizedWebhookEvent(
             external_id=payload.get("order_id", ""),
             platform=PaymentPlatform.KIWIFY,
             status=status,
             amount=amount,
+            currency=str(currency),
             original_status=order_status,
             payment_method=payload.get("payment_method", ""),
             payment_status=order_status,

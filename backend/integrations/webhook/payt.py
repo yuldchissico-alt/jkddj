@@ -92,11 +92,18 @@ def parse_payt_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebhookE
                     
             return str(val) if val else None
 
+        currency = (
+            payload.get("currency")
+            or payload.get("transaction", {}).get("currency")
+            or "BRL"
+        )
+
         return StandardizedWebhookEvent(
             external_id=str(tx_id),
             platform=PaymentPlatform.PAYT,
             status=status,
             amount=amount,
+            currency=str(currency),
             original_status=root_status,
             payment_method=payload.get("transaction", {}).get("payment_method", ""),
             payment_status=payment_status,

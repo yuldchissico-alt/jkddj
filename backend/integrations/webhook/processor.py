@@ -8,6 +8,7 @@ from database.models.transaction import Transaction, TransactionStatus
 from database.models.customer_product import CustomerProduct
 from database.core.timezone import now_sp
 from services.push_notifications import push_service
+from services.currency import to_system_base
 
 logger = logging.getLogger(__name__)
 
@@ -71,15 +72,25 @@ def process_webhook_event(db: Session, event: StandardizedWebhookEvent, company_
         Transaction.company_id == company_id
     ).first()
     
+    currency_code = getattr(event, "currency", "BRL") or "BRL"
+    base_amount, amount_mzn, orig_currency, orig_amount = to_system_base(
+        event.amount,
+        currency_code
+    )
+
     if existing_tx:
         logger.info(f"Transação {event.external_id} já existia. Status: {existing_tx.status} -> {event.status}")
         is_newly_approved = existing_tx.status != TransactionStatus.APPROVED and event.status == TransactionStatus.APPROVED
         is_newly_refunded = existing_tx.status == TransactionStatus.APPROVED and event.status in [TransactionStatus.REFUNDED, TransactionStatus.CHARGEBACK]
         
         existing_tx.status = event.status
+        if getattr(existing_tx, "amount_mzn", None) is None:
+            existing_tx.amount_mzn = amount_mzn
+            existing_tx.original_currency = orig_currency
+            existing_tx.original_amount = orig_amount
         
         if is_newly_approved:
-            customer.total_spent += event.amount
+            customer.total_spent += existing_tx.amount
             customer.total_orders += 1
             customer.last_purchase_at = get_saopaulo_time()
             if not customer.first_purchase_at:
@@ -89,13 +100,14 @@ def process_webhook_event(db: Session, event: StandardizedWebhookEvent, company_
             try:
                 push_service.send_sale_notification(
                     db=db,
-                    amount=event.amount,
+                    amount=existing_tx.amount,
                     product_name=event.product_name or "Produto",
                     customer_name=event.customer_name,
-                    company_id=company_id
+                    company_id=company_id,
+                    amount_mzn=existing_tx.amount_mzn or amount_mzn
                 )
             except Exception as e:
-                logger.error(f"Erro ao enviar notificação push: {e}")
+                logger.error("Erro ao enviar notificação push: %s", repr(e))
                 
         elif is_newly_refunded:
             customer.total_spent -= existing_tx.amount
@@ -112,7 +124,7 @@ def process_webhook_event(db: Session, event: StandardizedWebhookEvent, company_
     # 3. TRANSAÇÃO NOVA
     # -------------------------------------------------------------
     if event.status == TransactionStatus.APPROVED:
-        customer.total_spent += event.amount
+        customer.total_spent += base_amount
         customer.total_orders += 1
         customer.last_purchase_at = get_saopaulo_time()
         if not customer.first_purchase_at:
@@ -122,10 +134,9 @@ def process_webhook_event(db: Session, event: StandardizedWebhookEvent, company_
     product = ensure_product_from_webhook(db, event, company_id)
     product_id_to_save = product.id if product else None
     
-    amount_to_save = event.amount
     # Se for uma nova transação de chargeback/reembolso recebida direto (ex: reenvio webhooks de histórico)
     # e chegar aqui com 0, tentamos copiar da possível venda original usando email e nome do produto (já que external_id falhou).
-    if event.status in [TransactionStatus.REFUNDED, TransactionStatus.CHARGEBACK] and amount_to_save == 0.0:
+    if event.status in [TransactionStatus.REFUNDED, TransactionStatus.CHARGEBACK] and base_amount == 0.0:
         original_tx = db.query(Transaction).filter(
             Transaction.customer_email == event.customer_email,
             Transaction.product_name == event.product_name,
@@ -133,14 +144,20 @@ def process_webhook_event(db: Session, event: StandardizedWebhookEvent, company_
         ).order_by(Transaction.id.desc()).first()
         
         if original_tx:
-            amount_to_save = original_tx.amount
+            base_amount = original_tx.amount
+            amount_mzn = original_tx.amount_mzn or round(original_tx.amount * 13, 2)
+            orig_currency = original_tx.original_currency or orig_currency
+            orig_amount = original_tx.original_amount or original_tx.amount
     
     new_tx = Transaction(
         company_id=company_id,
         external_id=event.external_id,
         platform=event.platform,
         status=event.status,
-        amount=amount_to_save,
+        amount=base_amount,
+        original_currency=orig_currency,
+        original_amount=orig_amount,
+        amount_mzn=amount_mzn,
         customer_id=customer.id,
         product_id=product_id_to_save,
         product_name=event.product_name,
@@ -174,7 +191,7 @@ def process_webhook_event(db: Session, event: StandardizedWebhookEvent, company_
             db.add(new_cp)
     
     db.commit()
-    logger.info(f"Webhook processado com sucesso. Transação: {new_tx.id}")
+    logger.info(f"Webhook processado com sucesso. Transação: {new_tx.id} | Moeda: {orig_currency} | Metical: {amount_mzn} MT")
     
     # -------------------------------------------------------------
     # 5. ENVIAR NOTIFICAÇÃO PUSH (se for venda aprovada)
@@ -183,10 +200,11 @@ def process_webhook_event(db: Session, event: StandardizedWebhookEvent, company_
         try:
             push_service.send_sale_notification(
                 db=db,
-                amount=amount_to_save,
+                amount=base_amount,
                 product_name=event.product_name or "Produto",
                 customer_name=event.customer_name,
-                company_id=company_id
+                company_id=company_id,
+                amount_mzn=amount_mzn
             )
         except Exception as e:
             logger.error("Erro ao enviar notificação push: %s", repr(e))

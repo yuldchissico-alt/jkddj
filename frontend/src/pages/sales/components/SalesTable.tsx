@@ -115,7 +115,14 @@ export function SalesTable({ data, loading, total, page, onPageChange, onSaleDel
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right tabular-nums font-medium">
-                          {convertAndFormatMZN(sale.amount, 2)}
+                          <div>{convertAndFormatMZN(sale.amount, 2)}</div>
+                          {sale.original_currency && sale.original_currency !== "BRL" && sale.original_amount != null && (
+                            <div className="text-[10px] text-muted-foreground font-normal">
+                              {sale.original_currency === "USD"
+                                ? `$ ${sale.original_amount.toFixed(2)}`
+                                : `${sale.original_amount.toFixed(2)} ${sale.original_currency}`}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground max-w-[160px] truncate">
                           {sale.customer_email || "—"}

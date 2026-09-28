@@ -23,11 +23,14 @@ def parse_api_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebhookEv
             logger.warning(f"Status desconhecido recebido via API: '{status_raw}'. Usando PENDING.")
             status = TransactionStatus.PENDING
 
+        currency = payload.get("currency") or "BRL"
+
         return StandardizedWebhookEvent(
             external_id=str(payload.get("external_id", "")),
             platform=PaymentPlatform.API,
             status=status,
             amount=float(payload.get("amount", 0.0)),
+            currency=str(currency),
             product_external_id=str(payload.get("product_external_id", "")),
             product_name=str(payload.get("product_name", "")),
             product_price=float(payload.get("product_price", 0.0)),
