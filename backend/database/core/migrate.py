@@ -16,6 +16,8 @@ _NEW_ENUM_VALUES = [
     ("webhookplatform", "HOTMART"),
     ("paymentplatform", "API"),
     ("paymentplatform", "HOTMART"),
+    ("checkoutplatform", "API"),
+    ("checkoutplatform", "HOTMART"),
     ("transactionstatus", "TRIAL"),
     ("recoverytype", "TRIAL"),
 ]

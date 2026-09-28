@@ -35,6 +35,17 @@ const PAYT_STEPS = [
   'Clique em "Salvar e Voltar"',
 ];
 
+const HOTMART_STEPS = [
+  'Acesse o painel da Hotmart e clique em "Ferramentas"',
+  'Procure e clique em "Webhook (Notificações de Vendas)"',
+  'Clique em "Cadastrar Webhook" ou "+"',
+  'Coloque um nome para a configuração (ex: "LomusTrack")',
+  'Cole a URL criada aqui no campo "URL para envio de dados"',
+  'Em versão, selecione "Versão 2.0 (Recomendada)"',
+  'Em eventos, selecione "Todos os eventos" (ou Compra Aprovada, Cancelada, etc.)',
+  'Clique em "Salvar"',
+];
+
 const API_FIELDS = [
   { field: "external_id", type: "string", required: true,  desc: "ID único da transação no seu sistema" },
   { field: "status",      type: "string", required: true,  desc: '"approved" | "pending" | "refunded" | "chargeback" | "trial"' },
@@ -203,6 +214,15 @@ export function IntegrationGuide() {
               </AccordionContent>
             </AccordionItem>
 
+            <AccordionItem value="hotmart" className="border-border/50">
+              <AccordionTrigger className="text-xs font-semibold py-2.5 hover:no-underline">
+                <PlatformLogo platform="hotmart" size="md" />
+              </AccordionTrigger>
+              <AccordionContent className="pb-3 pt-1">
+                <StepsList steps={HOTMART_STEPS} />
+              </AccordionContent>
+            </AccordionItem>
+
             <AccordionItem value="api" className="border-border/50">
               <AccordionTrigger className="text-xs font-semibold py-2.5 hover:no-underline">
                 <span className="flex items-center gap-2">
@@ -218,7 +238,7 @@ export function IntegrationGuide() {
 
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5">
             <p className="text-[10px] text-primary/80 leading-relaxed">
-              <strong>Dica:</strong> Após criar o endpoint aqui no Nexuscale, copie
+              <strong>Dica:</strong> Após criar o endpoint aqui no LomusTrack, copie
               a URL gerada e cole na plataforma de pagamento seguindo o tutorial acima.
               Selecione todos os eventos para capturar vendas, reembolsos e abandonos.
             </p>

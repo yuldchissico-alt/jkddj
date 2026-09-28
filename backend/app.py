@@ -67,8 +67,8 @@ from api.debug.database_status import router as debug_router
 
 from database.core.migrate_sql import run_sql_migrations
 
-# Migrate ENUM columns → VARCHAR (idempotent, runs on every boot)
-# run_enum_migrations(engine)
+# Ensure all ENUM values (including HOTMART, API) exist (idempotent, runs on boot)
+run_enum_migrations(engine)
 
 # Create tables (must run before SQL migrations so tables exist)
 Base.metadata.create_all(bind=engine)

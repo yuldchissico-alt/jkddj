@@ -189,7 +189,7 @@ def process_webhook_event(db: Session, event: StandardizedWebhookEvent, company_
                 company_id=company_id
             )
         except Exception as e:
-            logger.error(f"Erro ao enviar notificação push: {e}")
+            logger.error("Erro ao enviar notificação push: %s", repr(e))
             # Não falha o processamento do webhook se a notificação falhar
     
     return new_tx
