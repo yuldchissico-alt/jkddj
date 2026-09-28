@@ -20,6 +20,7 @@ from integrations.meta_ads.schemas import (
     AdInsights,
     AccountInsightsSummary,
 )
+from services.currency import convert_spend_to_system_base
 
 logger = logging.getLogger(__name__)
 
@@ -31,22 +32,40 @@ class MetaAdsService:
     """
     Fachada para toda integração com Meta Ads.
     Usa cache + paralelização para minimizar chamadas à API.
+    Converte automaticamente spend de USD (ou outra moeda) para a base do sistema.
     """
 
-    def __init__(self, access_token: str, account_id: str):
+    def __init__(self, access_token: str, account_id: str, currency: str = "BRL"):
         self.client = MetaAdsClient(access_token, account_id)
         self._account_id = account_id
+        self.currency = (currency or "BRL").upper()
+
+    async def detect_currency(self) -> str:
+        """Busca a moeda configurada na conta de anúncios na Meta Graph API."""
+        try:
+            data = await self.client._get(f"{self.client.account_id}", params={"fields": "currency"})
+            curr = data.get("currency")
+            if curr:
+                self.currency = curr.upper()
+                return self.currency
+        except Exception as e:
+            logger.warning(f"Erro ao detectar moeda da conta {self.client.account_id}: {e}")
+        return self.currency
 
     async def get_campaigns(
         self, date_start: str, date_end: str,
     ) -> list[CampaignInsights]:
         key = build_cache_key(
-            self._account_id, "campaigns", date_start, date_end,
+            self._account_id, f"campaigns_{self.currency}", date_start, date_end,
         )
         cached = get_cached(key)
         if cached is not None:
             return cached
         result = await fetch_campaigns(self.client, date_start, date_end)
+        if self.currency != "BRL":
+            for c in result:
+                c.spend = convert_spend_to_system_base(c.spend, self.currency)
+                c.cpc = convert_spend_to_system_base(c.cpc, self.currency)
         set_cached(key, result, CACHE_TTL)
         return result
 
@@ -54,12 +73,16 @@ class MetaAdsService:
         self, date_start: str, date_end: str,
     ) -> list[AdSetInsights]:
         key = build_cache_key(
-            self._account_id, "adsets", date_start, date_end,
+            self._account_id, f"adsets_{self.currency}", date_start, date_end,
         )
         cached = get_cached(key)
         if cached is not None:
             return cached
         result = await fetch_adsets(self.client, date_start, date_end)
+        if self.currency != "BRL":
+            for a in result:
+                a.spend = convert_spend_to_system_base(a.spend, self.currency)
+                a.cpc = convert_spend_to_system_base(a.cpc, self.currency)
         set_cached(key, result, CACHE_TTL)
         return result
 
@@ -67,12 +90,16 @@ class MetaAdsService:
         self, date_start: str, date_end: str,
     ) -> list[AdInsights]:
         key = build_cache_key(
-            self._account_id, "ads", date_start, date_end,
+            self._account_id, f"ads_{self.currency}", date_start, date_end,
         )
         cached = get_cached(key)
         if cached is not None:
             return cached
         result = await fetch_ads(self.client, date_start, date_end)
+        if self.currency != "BRL":
+            for ad in result:
+                ad.spend = convert_spend_to_system_base(ad.spend, self.currency)
+                ad.cpc = convert_spend_to_system_base(ad.cpc, self.currency)
         set_cached(key, result, CACHE_TTL)
         return result
 
@@ -95,7 +122,7 @@ class MetaAdsService:
         self, date_start: str, date_end: str,
     ) -> AccountInsightsSummary:
         key = build_cache_key(
-            self._account_id, "account", date_start, date_end,
+            self._account_id, f"account_{self.currency}", date_start, date_end,
         )
         cached = get_cached(key)
         if cached is not None:
@@ -103,6 +130,9 @@ class MetaAdsService:
         result = await fetch_account_insights(
             self.client, date_start, date_end,
         )
+        if self.currency != "BRL":
+            result.spend = convert_spend_to_system_base(result.spend, self.currency)
+            result.cpc = convert_spend_to_system_base(result.cpc, self.currency)
         set_cached(key, result, CACHE_TTL)
         return result
 

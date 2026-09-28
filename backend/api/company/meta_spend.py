@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from database.models.facebook_account import FacebookAccount
 from integrations.meta_ads.client import MetaAdsClient, MetaAuthError
 from integrations.meta_ads.helpers import safe_float, safe_int
+from services.currency import convert_spend_to_system_base
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,10 @@ async def fetch_monthly_spend(
             period_start = row.get("date_start", "")
             if len(period_start) >= 7:
                 month_num = int(period_start[5:7])
+                raw_spend = safe_float(row.get("spend", 0))
+                spend = convert_spend_to_system_base(raw_spend, getattr(fb, "currency", "BRL"))
                 result[month_num] = {
-                    "spend": safe_float(row.get("spend", 0)),
+                    "spend": spend,
                     "clicks": safe_int(row.get("clicks", 0)),
                     "impressions": safe_int(row.get("impressions", 0)),
                 }

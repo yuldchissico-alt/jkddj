@@ -22,6 +22,7 @@ class FacebookAccountCreate(BaseModel):
     account_id: str
     access_token: str
     business_id: str | None = None
+    currency: str | None = "BRL"
 
 
 class FacebookAccountResponse(BaseModel):
@@ -30,6 +31,7 @@ class FacebookAccountResponse(BaseModel):
     account_id: str
     access_token: str
     business_id: str | None = None
+    currency: str | None = "BRL"
     status: str | None = "discovered"
     is_active: bool = False
     token_valid: bool = True
@@ -65,7 +67,7 @@ async def create_account(
             detail="Essa conta já está cadastrada"
         )
 
-    real_name = await _fetch_account_name(payload.access_token, payload.account_id)
+    real_name, detected_currency = await _fetch_account_info(payload.access_token, payload.account_id)
     label = real_name or payload.label
 
     account = FacebookAccount(
@@ -74,6 +76,7 @@ async def create_account(
         account_id=payload.account_id,
         access_token=payload.access_token,
         business_id=payload.business_id,
+        currency=detected_currency or payload.currency or "BRL",
         token_valid=True,
         status="discovered",
         is_active=False,
@@ -195,21 +198,23 @@ def delete_account(
     db.commit()
 
 
-async def _fetch_account_name(access_token: str, account_id: str) -> str | None:
-    """Busca o nome real da conta de anúncio na Graph API."""
+async def _fetch_account_info(access_token: str, account_id: str) -> tuple[str | None, str | None]:
+    """Busca o nome real e moeda da conta de anúncio na Graph API."""
     act_id = account_id if account_id.startswith("act_") else f"act_{account_id}"
     url = f"{GRAPH_API_BASE}/{act_id}"
-    params = {"access_token": access_token, "fields": "name"}
+    params = {"access_token": access_token, "fields": "name,currency"}
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(url, params=params)
             if resp.status_code == 200:
-                name = resp.json().get("name", "")
+                data = resp.json()
+                name = data.get("name")
+                currency = data.get("currency")
                 if name:
-                    logger.info(f"Nome real da conta {act_id}: {name}")
-                    return name
-            logger.warning(f"Falha ao buscar nome de {act_id}: {resp.status_code}")
+                    logger.info(f"Nome real da conta {act_id}: {name} | Moeda: {currency}")
+                return name, currency
+            logger.warning(f"Falha ao buscar dados de {act_id}: {resp.status_code}")
     except Exception as e:
-        logger.warning(f"Erro ao buscar nome de {act_id}: {e}")
-    return None
+        logger.warning(f"Erro ao buscar dados de {act_id}: {e}")
+    return None, None

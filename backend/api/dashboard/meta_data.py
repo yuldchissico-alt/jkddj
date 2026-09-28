@@ -53,7 +53,15 @@ async def fetch_meta_account_summary(
             return None, "token_invalid"
         return None, None
 
-    service = MetaAdsService(fb.access_token, fb.account_id)
+    service = MetaAdsService(fb.access_token, fb.account_id, currency=fb.currency or "BRL")
+    if not fb.currency:
+        try:
+            detected = await service.detect_currency()
+            if detected:
+                fb.currency = detected
+                db.commit()
+        except Exception:
+            pass
     try:
         summary = await service.get_account_summary(date_start, date_end)
         return summary, None
@@ -77,7 +85,7 @@ async def fetch_meta_campaigns_for_dashboard(
     if not fb:
         return []
 
-    service = MetaAdsService(fb.access_token, fb.account_id)
+    service = MetaAdsService(fb.access_token, fb.account_id, currency=fb.currency or "BRL")
     try:
         campaigns = await service.get_campaigns(date_start, date_end)
         return campaigns

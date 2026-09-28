@@ -20,6 +20,7 @@ class FacebookAccount(Base):
     status = Column(String(30), nullable=True, default="discovered")
     is_active = Column(Boolean, nullable=False, default=False, server_default="false")
     token_valid = Column(Boolean, nullable=False, default=True, server_default="true")
+    currency = Column(String(10), default="BRL", nullable=True)
     last_sync_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=CREATED_AT_DEFAULT)
 

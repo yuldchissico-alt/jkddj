@@ -18,7 +18,7 @@ def _get_meta_service(db):
     ).first()
     if not account:
         return None
-    return MetaAdsService(account.access_token, account.account_id)
+    return MetaAdsService(account.access_token, account.account_id, currency=account.currency or "BRL")
 
 
 @tool

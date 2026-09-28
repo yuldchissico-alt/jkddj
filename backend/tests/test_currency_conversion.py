@@ -122,3 +122,21 @@ def test_api_webhook_captures_currency():
     assert event is not None
     assert event.currency == "USD"
     assert event.amount == 75.0
+
+
+def test_convert_spend_to_system_base():
+    from services.currency import convert_spend_to_system_base
+
+    # Se a conta Meta gastou $100 USD:
+    # 100 USD = 6400 MT. Na base do sistema (base * 13 == 6400), base é 492.3077.
+    # Quando o frontend multiplica por 13, dá exatamente 6400 MT!
+    spend_usd = 100.0
+    base_spend = convert_spend_to_system_base(spend_usd, "USD")
+    assert round(base_spend * 13, 2) == 6400.0
+
+    # Se a conta Meta gastou R$ 100 BRL:
+    # 100 BRL = 1300 MT. Na base do sistema, base é 100.0.
+    spend_brl = 100.0
+    base_spend_brl = convert_spend_to_system_base(spend_brl, "BRL")
+    assert base_spend_brl == 100.0
+    assert round(base_spend_brl * 13, 2) == 1300.0

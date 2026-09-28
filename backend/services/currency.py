@@ -62,3 +62,16 @@ def to_system_base(amount: float, currency: str | None) -> Tuple[float, float, s
     mzn_amt = to_metical(orig_amt, curr)
     base_amt = round(mzn_amt / BASE_MZN_PER_BRL, 4)
     return base_amt, mzn_amt, curr, orig_amt
+
+
+def convert_spend_to_system_base(spend: float, currency: str | None) -> float:
+    """
+    Converte o spend da Meta Ads (que vem na moeda da conta de anúncios, ex: USD ou BRL)
+    para a base do sistema (BRL base), garantindo que ao multiplicar por 13 no frontend
+    ou subtrair do revenue, o valor em Meticais (MT) seja matematicamente exato.
+    """
+    if not spend:
+        return 0.0
+    base_amt, _, _, _ = to_system_base(spend, currency)
+    return base_amt
+

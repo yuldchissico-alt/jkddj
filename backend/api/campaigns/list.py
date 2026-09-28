@@ -40,7 +40,7 @@ async def get_campaigns_data(
         return {"campaigns": [], "unidentified": _build_unidentified(db, date_start, date_end, company_id)}
 
     # 2. Buscar dados do Meta Ads
-    service = MetaAdsService(fb_account.access_token, fb_account.account_id)
+    service = MetaAdsService(fb_account.access_token, fb_account.account_id, currency=fb_account.currency or "BRL")
     try:
         meta_campaigns, meta_adsets, meta_ads = await service.get_all_levels(
             date_start, date_end,

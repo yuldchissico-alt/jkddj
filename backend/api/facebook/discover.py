@@ -30,6 +30,7 @@ class DiscoverRequest(BaseModel):
 class DiscoveredAccount(BaseModel):
     account_id: str
     name: str
+    currency: str = "BRL"
 
 
 class DiscoverResponse(BaseModel):
@@ -82,6 +83,8 @@ async def sync_accounts(
         if existing:
             if not existing.business_id:
                 existing.business_id = payload.business_id
+            if item.currency:
+                existing.currency = item.currency
             skipped += 1
             continue
 
@@ -90,6 +93,7 @@ async def sync_accounts(
             account_id=item.account_id,
             access_token=payload.access_token,
             business_id=payload.business_id,
+            currency=item.currency or "BRL",
         ))
         added += 1
 
@@ -111,7 +115,7 @@ async def _fetch_bm_accounts(
                 url = f"{GRAPH_API_BASE}/{business_id}/{edge}"
                 params = {
                     "access_token": access_token,
-                    "fields": "account_id,name",
+                    "fields": "account_id,name,currency",
                     "limit": 100,
                 }
 
@@ -154,8 +158,9 @@ def _parse_accounts(data: dict) -> list[DiscoveredAccount]:
     for item in data.get("data", []):
         account_id = item.get("account_id", item.get("id", ""))
         name = item.get("name", account_id)
+        currency = item.get("currency", "BRL")
         if account_id:
             if not account_id.startswith("act_"):
                 account_id = f"act_{account_id}"
-            result.append(DiscoveredAccount(account_id=account_id, name=name))
+            result.append(DiscoveredAccount(account_id=account_id, name=name, currency=currency))
     return result
